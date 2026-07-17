@@ -33,7 +33,7 @@ const EXTENSION_ID = 'xcxml';
  * When it was loaded as a module, 'extensionURL' will be replaced a URL which is retrieved from.
  * @type {string}
  */
-let extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcxml.mjs';
+let extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs';
 
 /**
  * States the video sensing activity can be set to.

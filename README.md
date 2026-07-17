@@ -8,7 +8,7 @@
 [Xcratch](https://xcratch.github.io/editor/) または [Stretch3](https://stretch3.github.io/) の「拡張機能を読み込む」で次の URL を指定してください。
 
 ```
-https://asondemita.github.io/xcx-ml/dist/xcxml.mjs
+https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs
 ```
 
 ## ブロック
@@ -39,7 +39,7 @@ https://asondemita.github.io/xcx-ml/dist/xcxml.mjs
 # 隣のディレクトリに xcratch/scratch-gui が必要です
 npm run register   # scratch-gui に拡張を登録
 npm run start      # 開発サーバー (http://localhost:8601)
-npm run build      # dist/xcxml.mjs をビルド
+npm run build      # dist/xcx-ml.mjs をビルド
 ```
 
 ## ライセンス

@@ -23,7 +23,7 @@ const entry = {
         });
     },
     extensionId: 'xcxml',
-    extensionURL: 'https://asondemita.github.io/xcx-ml/dist/xcxml.mjs',
+    extensionURL: 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs',
     collaborator: 'asondemita',
     iconURL: iconURL,
     insetIconURL: insetIconURL,

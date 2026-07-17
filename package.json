@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "機械学習 (KNN image classification) extension for Xcratch",
   "scripts": {
-    "build": "npx xcratch-build --module=xcxml --gui=${XCRATCH_PATH:-../scratch-gui} --block=./src/vm/extensions/block --entry=./src/gui/lib/libraries/extensions/entry --output=./dist",
+    "build": "npx xcratch-build --module=xcx-ml --gui=${XCRATCH_PATH:-../scratch-gui} --block=./src/vm/extensions/block --entry=./src/gui/lib/libraries/extensions/entry --output=./dist",
     "register": "find src/vm -maxdepth 1 -type l -delete; npx -y xcratch-register --id=xcxml --gui=${XCRATCH_PATH:-../scratch-gui} --block=./src/vm/extensions/block --entry=./src/gui/lib/libraries/extensions/entry --link",
     "prebuild": "npm run register",
     "prestart": "npm run register",
