@@ -1,0 +1,14 @@
+{
+  "en": {
+    "xcxml.entry.name": "Machine Learning",
+    "xcxml.entry.description": "Recognize camera images with machine learning (KNN)."
+  },
+  "ja": {
+    "xcxml.entry.name": "機械学習",
+    "xcxml.entry.description": "機械学習(KNN)でカメラの画像を認識する。"
+  },
+  "ja-Hira": {
+    "xcxml.entry.name": "きかいがくしゅう",
+    "xcxml.entry.description": "きかいがくしゅう(KNN)でカメラのがぞうをにんしきする。"
+  }
+}

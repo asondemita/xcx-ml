@@ -1,0 +1,44 @@
+{
+  "en": {
+    "xcxml.name": "Machine Learning",
+    "xcxml.trainLabel1": "train label 1",
+    "xcxml.trainLabel2": "train label 2",
+    "xcxml.trainLabel3": "train label 3",
+    "xcxml.label": "label",
+    "xcxml.reset": "reset learning",
+    "xcxml.saveData": "save learning data",
+    "xcxml.loadData": "load learning data",
+    "xcxml.loadDialog.message": "select a learning data file",
+    "xcxml.loadDialog.load": "load",
+    "xcxml.loadDialog.cancel": "cancel",
+    "xcxml.loadInvalidFile": "This file is not learning data for this extension."
+  },
+  "ja": {
+    "xcxml.name": "機械学習",
+    "xcxml.trainLabel1": "ラベル1を学習する",
+    "xcxml.trainLabel2": "ラベル2を学習する",
+    "xcxml.trainLabel3": "ラベル3を学習する",
+    "xcxml.label": "ラベル",
+    "xcxml.reset": "学習をリセット",
+    "xcxml.saveData": "学習データを保存",
+    "xcxml.loadData": "学習データを読み込む",
+    "xcxml.loadDialog.message": "学習データファイルを選んでください",
+    "xcxml.loadDialog.load": "読み込む",
+    "xcxml.loadDialog.cancel": "キャンセル",
+    "xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。"
+  },
+  "ja-Hira": {
+    "xcxml.name": "きかいがくしゅう",
+    "xcxml.trainLabel1": "ラベル1をがくしゅうする",
+    "xcxml.trainLabel2": "ラベル2をがくしゅうする",
+    "xcxml.trainLabel3": "ラベル3をがくしゅうする",
+    "xcxml.label": "ラベル",
+    "xcxml.reset": "がくしゅうをリセット",
+    "xcxml.saveData": "がくしゅうデータをほぞん",
+    "xcxml.loadData": "がくしゅうデータをよみこむ",
+    "xcxml.loadDialog.message": "がくしゅうデータファイルをえらんでください",
+    "xcxml.loadDialog.load": "よみこむ",
+    "xcxml.loadDialog.cancel": "キャンセル",
+    "xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。"
+  }
+}

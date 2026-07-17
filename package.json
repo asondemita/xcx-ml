@@ -1,0 +1,28 @@
+{
+  "name": "xcx-ml",
+  "version": "0.1.0",
+  "description": "機械学習 (KNN image classification) extension for Xcratch",
+  "scripts": {
+    "build": "npx xcratch-build --module=xcxml --gui=${XCRATCH_PATH:-../scratch-gui} --block=./src/vm/extensions/block --entry=./src/gui/lib/libraries/extensions/entry --output=./dist",
+    "register": "find src/vm -maxdepth 1 -type l -delete; npx -y xcratch-register --id=xcxml --gui=${XCRATCH_PATH:-../scratch-gui} --block=./src/vm/extensions/block --entry=./src/gui/lib/libraries/extensions/entry --link",
+    "prebuild": "npm run register",
+    "prestart": "npm run register",
+    "start": "cd ${XCRATCH_PATH:-../scratch-gui} && npm run start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asondemita/xcx-ml.git"
+  },
+  "keywords": [
+    "scratch",
+    "xcratch",
+    "machine-learning"
+  ],
+  "author": "asondemita",
+  "license": "MIT",
+  "homepage": "https://github.com/asondemita/xcx-ml#readme",
+  "devDependencies": {
+    "xcratch-build": "^0.5.0",
+    "xcratch-register": "^0.4.2"
+  }
+}
