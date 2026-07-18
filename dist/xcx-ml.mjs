@@ -568,7 +568,9 @@ var en = {
 	"xcxml.loadDialog.message": "select a learning data file",
 	"xcxml.loadDialog.load": "load",
 	"xcxml.loadDialog.cancel": "cancel",
-	"xcxml.loadInvalidFile": "This file is not learning data for this extension."
+	"xcxml.loadInvalidFile": "This file is not learning data for this extension.",
+	"xcxml.setupNotice.message": "Preparing the machine learning environment. This may take a while...",
+	"xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again."
 };
 var ja = {
 	"xcxml.name": "機械学習",
@@ -582,7 +584,9 @@ var ja = {
 	"xcxml.loadDialog.message": "学習データファイルを選んでください",
 	"xcxml.loadDialog.load": "読み込む",
 	"xcxml.loadDialog.cancel": "キャンセル",
-	"xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。"
+	"xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。",
+	"xcxml.setupNotice.message": "環境構築に少し時間がかかります…",
+	"xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。"
 };
 var translations = {
 	en: en,
@@ -599,7 +603,9 @@ var translations = {
 	"xcxml.loadDialog.message": "がくしゅうデータファイルをえらんでください",
 	"xcxml.loadDialog.load": "よみこむ",
 	"xcxml.loadDialog.cancel": "キャンセル",
-	"xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。"
+	"xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。",
+	"xcxml.setupNotice.message": "かんきょうこうちくにすこしじかんがかかります…",
+	"xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。"
 }
 };
 
@@ -731,6 +737,16 @@ var ImageClassifier = /*#__PURE__*/function () {
         });
       }
       return this.loading;
+    }
+
+    /**
+     * ライブラリとモデルのロードが完了しているかどうか。
+     * @returns {boolean} 準備完了なら true
+     */
+  }, {
+    key: "isReady",
+    value: function isReady() {
+      return !!this.mobileNet && !!this.knn;
     }
 
     /**
@@ -943,6 +959,18 @@ var EXTENSION_ID = 'xcxml';
 var extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs';
 
 /**
+ * 初回セットアップ通知ダイアログの最低表示時間。
+ * @type {number} [milliseconds]
+ */
+var SETUP_NOTICE_MIN_DURATION = 3000;
+
+/**
+ * セットアップ失敗メッセージの表示時間。
+ * @type {number} [milliseconds]
+ */
+var SETUP_NOTICE_ERROR_DURATION = 5000;
+
+/**
  * States the video sensing activity can be set to.
  * @readonly
  * @enum {string}
@@ -1017,6 +1045,12 @@ var ExtensionBlocks = /*#__PURE__*/function () {
      * @type {boolean}
      */
     this.errorDialogOpened = false;
+
+    /**
+     * 表示中のセットアップ通知ダイアログ。
+     * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number}}
+     */
+    this.setupNotice = null;
   }
 
   /**
@@ -1089,38 +1123,106 @@ var ExtensionBlocks = /*#__PURE__*/function () {
       return getVideoInput;
     }()
     /**
+     * 初回セットアップ中であることを知らせるダイアログを表示する。
+     * 閉じるのは closeSetupNotice()。すでに表示中なら何もしない。
+     */
+    )
+  }, {
+    key: "openSetupNotice",
+    value: function openSetupNotice() {
+      if (this.setupNotice) return;
+      var dialog = document.createElement('dialog');
+      dialog.style.padding = '16px';
+      // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
+      dialog.style.position = 'fixed';
+      dialog.style.top = '40%';
+      dialog.style.zIndex = '1000';
+      var label = document.createTextNode(formatMessage({
+        id: 'xcxml.setupNotice.message',
+        default: 'Preparing the machine learning environment. This may take a while...',
+        description: 'notice that the first setup takes a while'
+      }));
+      dialog.appendChild(label);
+      document.body.appendChild(dialog);
+      dialog.show();
+      this.setupNotice = {
+        dialog: dialog,
+        label: label,
+        openedAt: Date.now()
+      };
+    }
+
+    /**
+     * セットアップ通知ダイアログを閉じる。
+     * 成功時は最低表示時間の残りを待ってから閉じる。
+     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
+     * @param {?Error} error - セットアップに失敗したときのエラー
+     */
+  }, {
+    key: "closeSetupNotice",
+    value: function closeSetupNotice(error) {
+      var notice = this.setupNotice;
+      if (!notice) return;
+      this.setupNotice = null;
+      var delay = SETUP_NOTICE_MIN_DURATION - (Date.now() - notice.openedAt);
+      if (error) {
+        notice.label.textContent = formatMessage({
+          id: 'xcxml.setupNotice.failed',
+          default: 'Setup failed. Check the network connection and the camera, then click the block again.',
+          description: 'message when the first setup failed'
+        });
+        delay = SETUP_NOTICE_ERROR_DURATION;
+      }
+      setTimeout(function () {
+        notice.dialog.close();
+        document.body.removeChild(notice.dialog);
+      }, Math.max(0, delay));
+    }
+
+    /**
      * 現在のカメラ画像を指定ラベルの例として学習する。
+     * 初回はライブラリ・モデルのロードとカメラ起動が走るため、通知ダイアログを表示する。
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
-    )
   }, {
     key: "mlTrain",
     value: (function () {
       var _mlTrain = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee2(label) {
-        var input, _t;
+        var classifier, firstSetup, input, _t;
         return regenerator.wrap(function (_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              _context2.prev = 0;
-              _context2.next = 1;
-              return this.getVideoInput();
-            case 1:
-              input = _context2.sent;
+              classifier = this.getImageClassifier();
+              firstSetup = !classifier.isReady();
+              if (firstSetup) {
+                this.openSetupNotice();
+              }
+              _context2.prev = 1;
               _context2.next = 2;
-              return this.getImageClassifier().train(input, label);
+              return this.getVideoInput();
             case 2:
-              _context2.next = 4;
-              break;
+              input = _context2.sent;
+              _context2.next = 3;
+              return classifier.train(input, label);
             case 3:
-              _context2.prev = 3;
-              _t = _context2["catch"](0);
-              console.error(_t);
+              if (firstSetup) {
+                this.closeSetupNotice();
+              }
+              _context2.next = 5;
+              break;
             case 4:
+              _context2.prev = 4;
+              _t = _context2["catch"](1);
+              if (firstSetup) {
+                this.closeSetupNotice(_t);
+              }
+              console.error(_t);
+            case 5:
             case "end":
               return _context2.stop();
           }
-        }, _callee2, this, [[0, 3]]);
+        }, _callee2, this, [[1, 4]]);
       }));
       function mlTrain(_x) {
         return _mlTrain.apply(this, arguments);

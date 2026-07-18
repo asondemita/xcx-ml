@@ -36,6 +36,18 @@ const EXTENSION_ID = 'xcxml';
 let extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs';
 
 /**
+ * 初回セットアップ通知ダイアログの最低表示時間。
+ * @type {number} [milliseconds]
+ */
+const SETUP_NOTICE_MIN_DURATION = 3000;
+
+/**
+ * セットアップ失敗メッセージの表示時間。
+ * @type {number} [milliseconds]
+ */
+const SETUP_NOTICE_ERROR_DURATION = 5000;
+
+/**
  * States the video sensing activity can be set to.
  * @readonly
  * @enum {string}
@@ -157,6 +169,12 @@ class ExtensionBlocks {
          * @type {boolean}
          */
         this.errorDialogOpened = false;
+
+        /**
+         * 表示中のセットアップ通知ダイアログ。
+         * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number}}
+         */
+        this.setupNotice = null;
     }
 
     /**
@@ -190,15 +208,75 @@ class ExtensionBlocks {
     }
 
     /**
+     * 初回セットアップ中であることを知らせるダイアログを表示する。
+     * 閉じるのは closeSetupNotice()。すでに表示中なら何もしない。
+     */
+    openSetupNotice () {
+        if (this.setupNotice) return;
+        const dialog = document.createElement('dialog');
+        dialog.style.padding = '16px';
+        // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
+        dialog.style.position = 'fixed';
+        dialog.style.top = '40%';
+        dialog.style.zIndex = '1000';
+        const label = document.createTextNode(formatMessage({
+            id: 'xcxml.setupNotice.message',
+            default: 'Preparing the machine learning environment. This may take a while...',
+            description: 'notice that the first setup takes a while'
+        }));
+        dialog.appendChild(label);
+        document.body.appendChild(dialog);
+        dialog.show();
+        this.setupNotice = {dialog, label, openedAt: Date.now()};
+    }
+
+    /**
+     * セットアップ通知ダイアログを閉じる。
+     * 成功時は最低表示時間の残りを待ってから閉じる。
+     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
+     * @param {?Error} error - セットアップに失敗したときのエラー
+     */
+    closeSetupNotice (error) {
+        const notice = this.setupNotice;
+        if (!notice) return;
+        this.setupNotice = null;
+        let delay = SETUP_NOTICE_MIN_DURATION - (Date.now() - notice.openedAt);
+        if (error) {
+            notice.label.textContent = formatMessage({
+                id: 'xcxml.setupNotice.failed',
+                default: 'Setup failed. Check the network connection and the camera, then click the block again.',
+                description: 'message when the first setup failed'
+            });
+            delay = SETUP_NOTICE_ERROR_DURATION;
+        }
+        setTimeout(() => {
+            notice.dialog.close();
+            document.body.removeChild(notice.dialog);
+        }, Math.max(0, delay));
+    }
+
+    /**
      * 現在のカメラ画像を指定ラベルの例として学習する。
+     * 初回はライブラリ・モデルのロードとカメラ起動が走るため、通知ダイアログを表示する。
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
     async mlTrain (label) {
+        const classifier = this.getImageClassifier();
+        const firstSetup = !classifier.isReady();
+        if (firstSetup) {
+            this.openSetupNotice();
+        }
         try {
             const input = await this.getVideoInput();
-            await this.getImageClassifier().train(input, label);
+            await classifier.train(input, label);
+            if (firstSetup) {
+                this.closeSetupNotice();
+            }
         } catch (error) {
+            if (firstSetup) {
+                this.closeSetupNotice(error);
+            }
             console.error(error);
         }
     }

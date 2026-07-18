@@ -89,6 +89,14 @@ export default class ImageClassifier {
     }
 
     /**
+     * ライブラリとモデルのロードが完了しているかどうか。
+     * @returns {boolean} 準備完了なら true
+     */
+    isReady () {
+        return !!this.mobileNet && !!this.knn;
+    }
+
+    /**
      * 学習済みの例があるかどうか。
      * @returns {boolean} 1 つ以上のラベルが学習済みなら true
      */

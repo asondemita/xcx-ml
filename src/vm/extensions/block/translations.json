@@ -11,7 +11,9 @@
     "xcxml.loadDialog.message": "select a learning data file",
     "xcxml.loadDialog.load": "load",
     "xcxml.loadDialog.cancel": "cancel",
-    "xcxml.loadInvalidFile": "This file is not learning data for this extension."
+    "xcxml.loadInvalidFile": "This file is not learning data for this extension.",
+    "xcxml.setupNotice.message": "Preparing the machine learning environment. This may take a while...",
+    "xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again."
   },
   "ja": {
     "xcxml.name": "機械学習",
@@ -25,7 +27,9 @@
     "xcxml.loadDialog.message": "学習データファイルを選んでください",
     "xcxml.loadDialog.load": "読み込む",
     "xcxml.loadDialog.cancel": "キャンセル",
-    "xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。"
+    "xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。",
+    "xcxml.setupNotice.message": "環境構築に少し時間がかかります…",
+    "xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。"
   },
   "ja-Hira": {
     "xcxml.name": "きかいがくしゅう",
@@ -39,6 +43,8 @@
     "xcxml.loadDialog.message": "がくしゅうデータファイルをえらんでください",
     "xcxml.loadDialog.load": "よみこむ",
     "xcxml.loadDialog.cancel": "キャンセル",
-    "xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。"
+    "xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。",
+    "xcxml.setupNotice.message": "かんきょうこうちくにすこしじかんがかかります…",
+    "xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。"
   }
 }
