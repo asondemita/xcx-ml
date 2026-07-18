@@ -5,7 +5,7 @@
 
 ## 使い方
 
-[Xcratch](https://xcratch.github.io/editor/) または [Stretch3](https://stretch3.github.io/) の「拡張機能を読み込む」で次の URL を指定してください。
+[Xcratch](https://xcratch.github.io/editor/) の「拡張機能を読み込む」で次の URL を指定してください。
 
 ```
 https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs
