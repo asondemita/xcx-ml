@@ -614,16 +614,23 @@ var img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAA
 /**
  * 画像分類器 (MobileNet 特徴量 + KNN による転移学習)。
  *
- * TensorFlow.js 一式は最初に使われたときに CDN から動的にロードするので、
+ * TensorFlow.js 一式は最初に使われたときに動的にロードするので、
  * ML ブロックを使わないプロジェクトではメモリもネットワークも消費しない。
+ *
+ * ライブラリとモデルは拡張機能と同じ GitHub Pages から配信する。
+ * 学校のネットワークフィルタは CDN (cdn.jsdelivr.net) や TensorFlow Hub を
+ * ブロックしていることが多く、拡張機能本体が読める配信元に同梱しておけば
+ * 追加の許可なしで動くため。ファイルは libs/ と models/ に置いてある。
  *
  * ML2Scratch と違い、推論のたびに生成される特徴量テンソルを必ず dispose して
  * メモリリークを防ぐ。分類の常時ループも持たない（呼ばれたときだけ推論する）。
  */
 
-var TFJS_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
-var KNN_CLASSIFIER_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.6/dist/knn-classifier.min.js';
-var MOBILENET_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js';
+var ASSETS_BASE_URL = 'https://asondemita.github.io/xcx-ml';
+var TFJS_URL = "".concat(ASSETS_BASE_URL, "/libs/tf.min.js");
+var KNN_CLASSIFIER_URL = "".concat(ASSETS_BASE_URL, "/libs/knn-classifier.min.js");
+var MOBILENET_URL = "".concat(ASSETS_BASE_URL, "/libs/mobilenet.min.js");
+var MOBILENET_MODEL_URL = "".concat(ASSETS_BASE_URL, "/models/mobilenet_v2_050_224/model.json");
 
 /**
  * KNN 分類時に参照する近傍数
@@ -720,7 +727,8 @@ var ImageClassifier = /*#__PURE__*/function () {
                 _context.next = 4;
                 return window.mobilenet.load({
                   version: 2,
-                  alpha: 0.5
+                  alpha: 0.5,
+                  modelUrl: MOBILENET_MODEL_URL
                 });
               case 4:
                 _this.mobileNet = _context.sent;
