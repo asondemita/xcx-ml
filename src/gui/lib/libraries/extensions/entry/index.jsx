@@ -29,7 +29,7 @@ const entry = {
     insetIconURL: insetIconURL,
     get description () {
         return formatMessage({
-            defaultMessage: 'Recognize camera images with machine learning (KNN).',
+            defaultMessage: 'Recognize camera images and microphone sounds with machine learning (KNN).',
             description: 'Description for the "Machine Learning" extension',
             id: 'xcxml.entry.description'
         });

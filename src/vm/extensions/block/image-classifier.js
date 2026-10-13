@@ -4,116 +4,47 @@
  * TensorFlow.js 一式は最初に使われたときに動的にロードするので、
  * ML ブロックを使わないプロジェクトではメモリもネットワークも消費しない。
  *
- * ライブラリとモデルは拡張機能と同じ GitHub Pages から配信する。
- * 学校のネットワークフィルタは CDN (cdn.jsdelivr.net) や TensorFlow Hub を
- * ブロックしていることが多く、拡張機能本体が読める配信元に同梱しておけば
- * 追加の許可なしで動くため。ファイルは libs/ と models/ に置いてある。
- *
- * ML2Scratch と違い、推論のたびに生成される特徴量テンソルを必ず dispose して
- * メモリリークを防ぐ。分類の常時ループも持たない（呼ばれたときだけ推論する）。
+ * 推論のたびに生成される特徴量テンソルを必ず dispose してメモリリークを防ぐ。
+ * 分類の常時ループも持たない (呼ばれたときだけ推論する)。
  */
 
-const ASSETS_BASE_URL = 'https://asondemita.github.io/xcx-ml';
+import KnnClassifierBase, {KNN_K} from './knn-classifier-base';
+import {ASSETS_BASE_URL, loadScript, loadTensorFlow} from './ml-assets';
 
-const TFJS_URL = `${ASSETS_BASE_URL}/libs/tf.min.js`;
-const KNN_CLASSIFIER_URL = `${ASSETS_BASE_URL}/libs/knn-classifier.min.js`;
 const MOBILENET_URL = `${ASSETS_BASE_URL}/libs/mobilenet.min.js`;
 const MOBILENET_MODEL_URL = `${ASSETS_BASE_URL}/models/mobilenet_v2_050_224/model.json`;
 
 /**
- * KNN 分類時に参照する近傍数
- * @type {number}
- */
-const KNN_K = 3;
-
-/**
- * 学習データファイルのフォーマット識別子
- * @type {string}
- */
-const DATA_FORMAT = 'xcx-g2s-knn';
-
-/**
- * 特徴抽出に使うモデルの識別子。
- * モデルが変わると特徴量の互換性がなくなるため、学習データファイルに記録して
- * 読み込み時に検査する。
+ * 特徴抽出に使うモデルの識別子
  * @type {string}
  */
 const MODEL_ID = 'mobilenet_v2_050_224';
 
-/**
- * <script> タグでスクリプトをロードする。
- * @param {string} url - スクリプトの URL
- * @returns {Promise} ロード完了で resolve する Promise
- */
-const loadScript = url => new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = url;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
-    document.head.appendChild(script);
-});
-
-export default class ImageClassifier {
+export default class ImageClassifier extends KnnClassifierBase {
 
     constructor () {
-        /**
-         * ライブラリとモデルのロード処理。一度だけ実行する。
-         * @type {?Promise}
-         */
-        this.loading = null;
+        super(MODEL_ID);
 
         /**
          * MobileNet モデル (特徴抽出器)
          */
         this.mobileNet = null;
-
-        /**
-         * KNN 分類器
-         */
-        this.knn = null;
     }
 
     /**
      * TensorFlow.js / MobileNet / KNN 分類器をロードする。
      * @returns {Promise} 準備完了で resolve する Promise
      */
-    load () {
-        if (!this.loading) {
-            this.loading = (async () => {
-                if (!window.tf) await loadScript(TFJS_URL);
-                if (!window.knnClassifier) await loadScript(KNN_CLASSIFIER_URL);
-                if (!window.mobilenet) await loadScript(MOBILENET_URL);
-                // alpha 0.5: 既定 (1.0) よりモデルが小さく、KNN 用途では精度も十分
-                this.mobileNet = await window.mobilenet.load({
-                    version: 2,
-                    alpha: 0.5,
-                    modelUrl: MOBILENET_MODEL_URL
-                });
-                this.knn = window.knnClassifier.create();
-            })()
-                .catch(error => {
-                    // 失敗したら次回の呼び出しでリトライできるようにする
-                    this.loading = null;
-                    throw error;
-                });
-        }
-        return this.loading;
-    }
-
-    /**
-     * ライブラリとモデルのロードが完了しているかどうか。
-     * @returns {boolean} 準備完了なら true
-     */
-    isReady () {
-        return !!this.mobileNet && !!this.knn;
-    }
-
-    /**
-     * 学習済みの例があるかどうか。
-     * @returns {boolean} 1 つ以上のラベルが学習済みなら true
-     */
-    hasExamples () {
-        return !!this.knn && this.knn.getNumClasses() > 0;
+    async loadModel () {
+        await loadTensorFlow();
+        if (!window.mobilenet) await loadScript(MOBILENET_URL);
+        // alpha 0.5: 既定 (1.0) よりモデルが小さく、KNN 用途では精度も十分
+        this.mobileNet = await window.mobilenet.load({
+            version: 2,
+            alpha: 0.5,
+            modelUrl: MOBILENET_MODEL_URL
+        });
+        this.knn = window.knnClassifier.create();
     }
 
     /**
@@ -145,61 +76,5 @@ export default class ImageClassifier {
         } finally {
             features.dispose();
         }
-    }
-
-    /**
-     * 学習した例をすべて消去する。保持していたテンソルも解放される。
-     */
-    reset () {
-        if (this.knn) {
-            this.knn.clearAllClasses();
-        }
-    }
-
-    /**
-     * 学習データを JSON 文字列にシリアライズする。
-     * @returns {string} 学習データの JSON 文字列
-     */
-    serialize () {
-        const labels = {};
-        if (this.knn) {
-            const dataset = this.knn.getClassifierDataset();
-            for (const label of Object.keys(dataset)) {
-                const examples = dataset[label];
-                labels[label] = {
-                    shape: examples.shape,
-                    data: Array.from(examples.dataSync())
-                };
-            }
-        }
-        return JSON.stringify({
-            format: DATA_FORMAT,
-            version: 1,
-            model: MODEL_ID,
-            labels: labels
-        });
-    }
-
-    /**
-     * シリアライズされた学習データを復元する。今の学習内容は破棄される。
-     * @param {object} parsed - JSON.parse 済みの学習データ
-     * @returns {Promise} 復元完了で resolve する Promise
-     */
-    async restore (parsed) {
-        if (!parsed || parsed.format !== DATA_FORMAT || !parsed.labels) {
-            throw new Error('invalid learning data format');
-        }
-        if (parsed.model !== MODEL_ID) {
-            // 別のモデルで作った特徴量は互換性がない
-            throw new Error(`incompatible model: ${parsed.model}`);
-        }
-        await this.load();
-        const dataset = {};
-        for (const label of Object.keys(parsed.labels)) {
-            const examples = parsed.labels[label];
-            dataset[label] = window.tf.tensor2d(examples.data, examples.shape);
-        }
-        this.knn.clearAllClasses();
-        this.knn.setClassifierDataset(dataset);
     }
 }
