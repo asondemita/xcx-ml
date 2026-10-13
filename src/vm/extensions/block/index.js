@@ -63,6 +63,12 @@ const SETUP_NOTICE_MIN_DURATION = 3000;
 const NOTICE_ERROR_DURATION = 5000;
 
 /**
+ * 録音終了メッセージの表示時間。
+ * @type {number} [milliseconds]
+ */
+const NOTICE_DONE_DURATION = 2000;
+
+/**
  * 学習・分類の入力元。
  * @readonly
  * @enum {string}
@@ -212,9 +218,16 @@ class ExtensionBlocks {
 
         /**
          * 表示中の通知ダイアログ (セットアップ中・録音中など)。
-         * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number, minDuration: number}}
+         * @type {?{dialog: HTMLDialogElement, label: HTMLElement, gauge: HTMLElement, gaugeFill: HTMLElement,
+         *   openedAt: number, minDuration: number}}
          */
         this.notice = null;
+
+        /**
+         * 閉じる予定で表示中の通知ダイアログ (closeNotice 後の待ち時間中)。
+         * @type {?{dialog: HTMLDialogElement, timer: number}}
+         */
+        this.closingNotice = null;
     }
 
     /**
@@ -285,17 +298,60 @@ class ExtensionBlocks {
             this.updateNotice(message, minDuration);
             return;
         }
+        if (this.closingNotice) {
+            // 前のダイアログが閉じ待ちなら、重ならないようにすぐ閉じる
+            clearTimeout(this.closingNotice.timer);
+            this.removeNoticeDialog(this.closingNotice.dialog);
+            this.closingNotice = null;
+        }
         const dialog = document.createElement('dialog');
         dialog.style.padding = '16px';
         // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
         dialog.style.position = 'fixed';
         dialog.style.top = '40%';
         dialog.style.zIndex = '1000';
-        const label = document.createTextNode(message);
+        const label = document.createElement('div');
+        label.textContent = message;
         dialog.appendChild(label);
+        // 録音の残り時間を示すゲージ (グレーの帯が左から赤く埋まる)。使うときだけ表示する。
+        const gauge = document.createElement('div');
+        gauge.style.display = 'none';
+        gauge.style.marginTop = '8px';
+        gauge.style.height = '10px';
+        gauge.style.minWidth = '240px';
+        gauge.style.background = '#cccccc';
+        gauge.style.borderRadius = '5px';
+        gauge.style.overflow = 'hidden';
+        const gaugeFill = document.createElement('div');
+        gaugeFill.style.width = '0%';
+        gaugeFill.style.height = '100%';
+        gaugeFill.style.background = '#e53935';
+        gaugeFill.style.transition = 'width 60ms linear';
+        gauge.appendChild(gaugeFill);
+        dialog.appendChild(gauge);
         document.body.appendChild(dialog);
         dialog.show();
-        this.notice = {dialog, label, openedAt: Date.now(), minDuration};
+        this.notice = {dialog, label, gauge, gaugeFill, openedAt: Date.now(), minDuration};
+    }
+
+    /**
+     * 通知ダイアログのゲージを表示して進み具合を反映する。
+     * @param {number} ratio - 進み具合 (0〜1)
+     */
+    setNoticeProgress (ratio) {
+        const notice = this.notice;
+        if (!notice) return;
+        notice.gauge.style.display = 'block';
+        notice.gaugeFill.style.width = `${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%`;
+    }
+
+    /**
+     * 通知ダイアログを DOM から取り除く。
+     * @param {HTMLDialogElement} dialog - ダイアログ
+     */
+    removeNoticeDialog (dialog) {
+        if (dialog.open) dialog.close();
+        if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
     }
 
     /**
@@ -324,12 +380,15 @@ class ExtensionBlocks {
         let delay = notice.minDuration - (Date.now() - notice.openedAt);
         if (errorMessage) {
             notice.label.textContent = errorMessage;
+            notice.gauge.style.display = 'none';
             delay = NOTICE_ERROR_DURATION;
         }
-        setTimeout(() => {
-            notice.dialog.close();
-            document.body.removeChild(notice.dialog);
+        const closing = {dialog: notice.dialog, timer: 0};
+        closing.timer = setTimeout(() => {
+            if (this.closingNotice === closing) this.closingNotice = null;
+            this.removeNoticeDialog(notice.dialog);
         }, Math.max(0, delay));
+        this.closingNotice = closing;
     }
 
     /**
@@ -356,8 +415,9 @@ class ExtensionBlocks {
     }
 
     /**
-     * これから約 1 秒間のマイクの音を指定ラベルの例として学習する。
-     * 録音中はダイアログで知らせる。初回はライブラリ・モデルのロードとマイク起動が先に走る。
+     * これから約 2 秒間のマイクの音を指定ラベルの例として学習する。
+     * 録音中はダイアログに残り時間のゲージを出し、終わると「終了」に変えて 2 秒後に閉じる。
+     * 初回はライブラリ・モデルのロードとマイク起動が先に走る。
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
@@ -374,7 +434,14 @@ class ExtensionBlocks {
                 default: 'Listening to the microphone...',
                 description: 'notice that the sound for training is being recorded'
             }), 0);
-            await classifier.train(label);
+            this.setNoticeProgress(0);
+            await classifier.train(label, ratio => this.setNoticeProgress(ratio));
+            this.setNoticeProgress(1);
+            this.updateNotice(formatMessage({
+                id: 'xcxml.listeningNotice.done',
+                default: 'Done',
+                description: 'notice that the recording for training has finished'
+            }), NOTICE_DONE_DURATION);
             this.closeNotice();
         } catch (error) {
             this.closeNotice(formatMessage({

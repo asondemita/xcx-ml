@@ -15,6 +15,7 @@
  * タイマー (setInterval) だとタブがバックグラウンドになったときに毎秒 1 回程度まで
  * 間引かれてフレームが揃わなくなるが、音声処理はタブの状態に関係なく進むため。
  * 分類は呼ばれたときだけ直近 1 秒分で推論する (常時推論ループなし)。
+ * 学習は約 2 秒録音し、1 秒の窓 3 つに切り出して例として追加する。
  */
 
 import KnnClassifierBase, {KNN_K} from './knn-classifier-base';
@@ -41,10 +42,30 @@ const SAMPLE_RATE = 44100;
 const FFT_SIZE = 1024;
 
 /**
- * 1 回の分類に使うフレーム数 (43 × 1024 / 44100 ≒ 1 秒)
+ * 1 回の分類に使うフレーム数 (43 × 1024 / 44100 ≒ 1 秒)。モデルの入力サイズで固定。
  * @type {number}
  */
 const NUM_FRAMES = 43;
+
+/**
+ * 1 回の学習で録音するフレーム数 (86 フレーム ≒ 2 秒)。
+ * モデルの入力は NUM_FRAMES 固定なので、録音を TRAIN_WINDOW_HOP ずつずらした
+ * NUM_FRAMES の窓に切り出し、窓ごとに例として学習する (2 秒なら 3 窓)。
+ * @type {number}
+ */
+const TRAIN_FRAMES = NUM_FRAMES * 2;
+
+/**
+ * 学習時に録音を窓に切り出すときのずらし幅 (フレーム数、約 0.5 秒)
+ * @type {number}
+ */
+const TRAIN_WINDOW_HOP = Math.floor(NUM_FRAMES / 2);
+
+/**
+ * 保持しておく直近フレームの最大数
+ * @type {number}
+ */
+const MAX_FRAMES = TRAIN_FRAMES;
 
 /**
  * 1 フレームのうちモデルに渡す周波数ビン数 (低い方から)
@@ -53,10 +74,10 @@ const NUM_FRAMES = 43;
 const FRAME_SIZE = 232;
 
 /**
- * 学習用の録音待ちタイムアウト
+ * 録音待ちタイムアウトの余裕 (録音時間にこれを足した時間でタイムアウトする)
  * @type {number} [milliseconds]
  */
-const CAPTURE_TIMEOUT = 5000;
+const CAPTURE_TIMEOUT_MARGIN = 3000;
 
 /**
  * 正規化時のゼロ除算防止用 (TensorFlow.js の float32 epsilon と同じ)
@@ -117,7 +138,7 @@ export default class AudioClassifier extends KnnClassifierBase {
         this.freqData = null;
 
         /**
-         * 直近のフレーム (古い順、最大 NUM_FRAMES 個)
+         * 直近のフレーム (古い順、最大 MAX_FRAMES 個)
          * @type {Array<Float32Array>}
          */
         this.frames = [];
@@ -130,7 +151,7 @@ export default class AudioClassifier extends KnnClassifierBase {
 
         /**
          * 録音完了を待っている処理
-         * @type {Array<{target: number, resolve: Function, reject: Function}>}
+         * @type {Array<{start: number, numFrames: number, onProgress: ?Function, resolve: Function, reject: Function}>}
          */
         this.captureWaiters = [];
     }
@@ -270,39 +291,62 @@ export default class AudioClassifier extends KnnClassifierBase {
             return;
         }
         this.frames.push(this.freqData.slice(0, FRAME_SIZE));
-        if (this.frames.length > NUM_FRAMES) {
+        if (this.frames.length > MAX_FRAMES) {
             this.frames.shift();
         }
         this.frameCount++;
         if (this.captureWaiters.length > 0) {
-            const done = this.captureWaiters.filter(waiter => this.frameCount >= waiter.target);
+            const done = [];
+            for (const waiter of this.captureWaiters) {
+                const captured = this.frameCount - waiter.start;
+                if (waiter.onProgress) {
+                    waiter.onProgress(Math.min(1, captured / waiter.numFrames));
+                }
+                if (captured >= waiter.numFrames) {
+                    done.push(waiter);
+                }
+            }
             if (done.length > 0) {
                 this.captureWaiters = this.captureWaiters.filter(waiter => !done.includes(waiter));
-                const frames = this.frames.slice();
-                done.forEach(waiter => waiter.resolve(frames));
+                done.forEach(waiter => waiter.resolve(this.frames.slice(-waiter.numFrames)));
             }
         }
     }
 
     /**
-     * これから約 1 秒分のフレームを録音する。
+     * これから指定フレーム数分を録音する。
+     * @param {number} numFrames - 録音するフレーム数
+     * @param {?Function} onProgress - 進み具合 (0〜1) を受け取るコールバック
      * @returns {Promise<Array<Float32Array>>} 録音したフレームで resolve する Promise
      */
-    captureNext () {
+    captureNext (numFrames, onProgress) {
         return new Promise((resolve, reject) => {
             const waiter = {
-                target: this.frameCount + NUM_FRAMES,
+                start: this.frameCount,
+                numFrames,
+                onProgress,
                 resolve,
                 reject
             };
             this.captureWaiters.push(waiter);
+            const sampleRate = this.audioContext ? this.audioContext.sampleRate : SAMPLE_RATE;
+            const timeout = (numFrames * FFT_SIZE / sampleRate * 1000) + CAPTURE_TIMEOUT_MARGIN;
             setTimeout(() => {
                 if (this.captureWaiters.includes(waiter)) {
                     this.captureWaiters = this.captureWaiters.filter(w => w !== waiter);
                     reject(new Error('timeout to capture audio'));
                 }
-            }, CAPTURE_TIMEOUT);
+            }, timeout);
         });
+    }
+
+    /**
+     * 1 回の学習で録音する時間。
+     * @returns {number} 録音時間 [milliseconds]
+     */
+    get trainDuration () {
+        const sampleRate = this.audioContext ? this.audioContext.sampleRate : SAMPLE_RATE;
+        return TRAIN_FRAMES * FFT_SIZE / sampleRate * 1000;
     }
 
     /**
@@ -333,17 +377,21 @@ export default class AudioClassifier extends KnnClassifierBase {
     }
 
     /**
-     * これから約 1 秒間の音を指定ラベルの例として学習する。
+     * これから約 2 秒間の音を指定ラベルの例として学習する。
+     * 録音を約 0.5 秒ずつずらした約 1 秒の窓に切り出し、窓ごとに例として追加する。
      * @param {string} label - ラベル
+     * @param {?Function} onProgress - 録音の進み具合 (0〜1) を受け取るコールバック
      * @returns {Promise} 学習完了で resolve する Promise
      */
-    async train (label) {
+    async train (label, onProgress) {
         await this.prepare();
-        const frames = await this.captureNext();
-        const features = this.embed(frames);
-        // addExample は内部でコピーを保持するので、渡したテンソルはすぐ破棄してよい
-        this.knn.addExample(features, label);
-        features.dispose();
+        const frames = await this.captureNext(TRAIN_FRAMES, onProgress);
+        for (let offset = 0; offset + NUM_FRAMES <= frames.length; offset += TRAIN_WINDOW_HOP) {
+            const features = this.embed(frames.slice(offset, offset + NUM_FRAMES));
+            // addExample は内部でコピーを保持するので、渡したテンソルはすぐ破棄してよい
+            this.knn.addExample(features, label);
+            features.dispose();
+        }
     }
 
     /**
@@ -355,7 +403,7 @@ export default class AudioClassifier extends KnnClassifierBase {
         if (!this.hasExamples()) return '';
         await this.startMicrophone();
         if (this.frames.length < NUM_FRAMES) return '';
-        const features = this.embed(this.frames);
+        const features = this.embed(this.frames.slice(-NUM_FRAMES));
         try {
             const result = await this.knn.predictClass(features, KNN_K);
             return result.label;

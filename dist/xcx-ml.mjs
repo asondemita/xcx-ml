@@ -578,7 +578,8 @@ var en = {
 	"xcxml.input.camera": "camera",
 	"xcxml.input.microphone": "microphone",
 	"xcxml.listeningNotice.message": "Listening to the microphone...",
-	"xcxml.setupNotice.failedMicrophone": "Setup failed. Check the network connection and the microphone, then click the block again."
+	"xcxml.setupNotice.failedMicrophone": "Setup failed. Check the network connection and the microphone, then click the block again.",
+	"xcxml.listeningNotice.done": "Done"
 };
 var ja = {
 	"xcxml.name": "機械学習",
@@ -599,7 +600,8 @@ var ja = {
 	"xcxml.input.camera": "カメラ",
 	"xcxml.input.microphone": "マイク",
 	"xcxml.listeningNotice.message": "マイクの音を聞いています…",
-	"xcxml.setupNotice.failedMicrophone": "環境構築に失敗しました。ネット接続とマイクを確認して、もう一度ブロックをクリックしてください。"
+	"xcxml.setupNotice.failedMicrophone": "環境構築に失敗しました。ネット接続とマイクを確認して、もう一度ブロックをクリックしてください。",
+	"xcxml.listeningNotice.done": "終了"
 };
 var translations = {
 	en: en,
@@ -623,7 +625,8 @@ var translations = {
 	"xcxml.input.camera": "カメラ",
 	"xcxml.input.microphone": "マイク",
 	"xcxml.listeningNotice.message": "マイクのおとをきいています…",
-	"xcxml.setupNotice.failedMicrophone": "かんきょうこうちくにしっぱいしました。ネットせつぞくとマイクをたしかめて、もういちどブロックをクリックしてください。"
+	"xcxml.setupNotice.failedMicrophone": "かんきょうこうちくにしっぱいしました。ネットせつぞくとマイクをたしかめて、もういちどブロックをクリックしてください。",
+	"xcxml.listeningNotice.done": "おわり"
 }
 };
 
@@ -1094,6 +1097,9 @@ var ImageClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
   }]);
 }(KnnClassifierBase);
 
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
 function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
 var SPEECH_MODEL_URL = "".concat(ASSETS_BASE_URL, "/models/speech_commands_18w/model.json");
@@ -1117,10 +1123,30 @@ var SAMPLE_RATE = 44100;
 var FFT_SIZE = 1024;
 
 /**
- * 1 回の分類に使うフレーム数 (43 × 1024 / 44100 ≒ 1 秒)
+ * 1 回の分類に使うフレーム数 (43 × 1024 / 44100 ≒ 1 秒)。モデルの入力サイズで固定。
  * @type {number}
  */
 var NUM_FRAMES = 43;
+
+/**
+ * 1 回の学習で録音するフレーム数 (86 フレーム ≒ 2 秒)。
+ * モデルの入力は NUM_FRAMES 固定なので、録音を TRAIN_WINDOW_HOP ずつずらした
+ * NUM_FRAMES の窓に切り出し、窓ごとに例として学習する (2 秒なら 3 窓)。
+ * @type {number}
+ */
+var TRAIN_FRAMES = NUM_FRAMES * 2;
+
+/**
+ * 学習時に録音を窓に切り出すときのずらし幅 (フレーム数、約 0.5 秒)
+ * @type {number}
+ */
+var TRAIN_WINDOW_HOP = Math.floor(NUM_FRAMES / 2);
+
+/**
+ * 保持しておく直近フレームの最大数
+ * @type {number}
+ */
+var MAX_FRAMES = TRAIN_FRAMES;
 
 /**
  * 1 フレームのうちモデルに渡す周波数ビン数 (低い方から)
@@ -1129,10 +1155,10 @@ var NUM_FRAMES = 43;
 var FRAME_SIZE = 232;
 
 /**
- * 学習用の録音待ちタイムアウト
+ * 録音待ちタイムアウトの余裕 (録音時間にこれを足した時間でタイムアウトする)
  * @type {number} [milliseconds]
  */
-var CAPTURE_TIMEOUT = 5000;
+var CAPTURE_TIMEOUT_MARGIN = 3000;
 
 /**
  * 正規化時のゼロ除算防止用 (TensorFlow.js の float32 epsilon と同じ)
@@ -1193,7 +1219,7 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
     _this.freqData = null;
 
     /**
-     * 直近のフレーム (古い順、最大 NUM_FRAMES 個)
+     * 直近のフレーム (古い順、最大 MAX_FRAMES 個)
      * @type {Array<Float32Array>}
      */
     _this.frames = [];
@@ -1206,7 +1232,7 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
 
     /**
      * 録音完了を待っている処理
-     * @type {Array<{target: number, resolve: Function, reject: Function}>}
+     * @type {Array<{start: number, numFrames: number, onProgress: ?Function, resolve: Function, reject: Function}>}
      */
     _this.captureWaiters = [];
     return _this;
@@ -1413,41 +1439,62 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
         return;
       }
       this.frames.push(this.freqData.slice(0, FRAME_SIZE));
-      if (this.frames.length > NUM_FRAMES) {
+      if (this.frames.length > MAX_FRAMES) {
         this.frames.shift();
       }
       this.frameCount++;
       if (this.captureWaiters.length > 0) {
-        var done = this.captureWaiters.filter(function (waiter) {
-          return _this4.frameCount >= waiter.target;
-        });
+        var done = [];
+        var _iterator = _createForOfIteratorHelper(this.captureWaiters),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var waiter = _step.value;
+            var captured = this.frameCount - waiter.start;
+            if (waiter.onProgress) {
+              waiter.onProgress(Math.min(1, captured / waiter.numFrames));
+            }
+            if (captured >= waiter.numFrames) {
+              done.push(waiter);
+            }
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
         if (done.length > 0) {
           this.captureWaiters = this.captureWaiters.filter(function (waiter) {
             return !done.includes(waiter);
           });
-          var frames = this.frames.slice();
           done.forEach(function (waiter) {
-            return waiter.resolve(frames);
+            return waiter.resolve(_this4.frames.slice(-waiter.numFrames));
           });
         }
       }
     }
 
     /**
-     * これから約 1 秒分のフレームを録音する。
+     * これから指定フレーム数分を録音する。
+     * @param {number} numFrames - 録音するフレーム数
+     * @param {?Function} onProgress - 進み具合 (0〜1) を受け取るコールバック
      * @returns {Promise<Array<Float32Array>>} 録音したフレームで resolve する Promise
      */
   }, {
     key: "captureNext",
-    value: function captureNext() {
+    value: function captureNext(numFrames, onProgress) {
       var _this5 = this;
       return new Promise(function (resolve, reject) {
         var waiter = {
-          target: _this5.frameCount + NUM_FRAMES,
+          start: _this5.frameCount,
+          numFrames: numFrames,
+          onProgress: onProgress,
           resolve: resolve,
           reject: reject
         };
         _this5.captureWaiters.push(waiter);
+        var sampleRate = _this5.audioContext ? _this5.audioContext.sampleRate : SAMPLE_RATE;
+        var timeout = numFrames * FFT_SIZE / sampleRate * 1000 + CAPTURE_TIMEOUT_MARGIN;
         setTimeout(function () {
           if (_this5.captureWaiters.includes(waiter)) {
             _this5.captureWaiters = _this5.captureWaiters.filter(function (w) {
@@ -1455,8 +1502,19 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
             });
             reject(new Error('timeout to capture audio'));
           }
-        }, CAPTURE_TIMEOUT);
+        }, timeout);
       });
+    }
+
+    /**
+     * 1 回の学習で録音する時間。
+     * @returns {number} 録音時間 [milliseconds]
+     */
+  }, {
+    key: "trainDuration",
+    get: function get() {
+      var sampleRate = this.audioContext ? this.audioContext.sampleRate : SAMPLE_RATE;
+      return TRAIN_FRAMES * FFT_SIZE / sampleRate * 1000;
     }
 
     /**
@@ -1512,16 +1570,18 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
       return prepare;
     }()
     /**
-     * これから約 1 秒間の音を指定ラベルの例として学習する。
+     * これから約 2 秒間の音を指定ラベルの例として学習する。
+     * 録音を約 0.5 秒ずつずらした約 1 秒の窓に切り出し、窓ごとに例として追加する。
      * @param {string} label - ラベル
+     * @param {?Function} onProgress - 録音の進み具合 (0〜1) を受け取るコールバック
      * @returns {Promise} 学習完了で resolve する Promise
      */
     )
   }, {
     key: "train",
     value: (function () {
-      var _train = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4(label) {
-        var frames, features;
+      var _train = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4(label, onProgress) {
+        var frames, offset, features;
         return regenerator.wrap(function (_context4) {
           while (1) switch (_context4.prev = _context4.next) {
             case 0:
@@ -1529,19 +1589,21 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
               return this.prepare();
             case 1:
               _context4.next = 2;
-              return this.captureNext();
+              return this.captureNext(TRAIN_FRAMES, onProgress);
             case 2:
               frames = _context4.sent;
-              features = this.embed(frames); // addExample は内部でコピーを保持するので、渡したテンソルはすぐ破棄してよい
-              this.knn.addExample(features, label);
-              features.dispose();
+              for (offset = 0; offset + NUM_FRAMES <= frames.length; offset += TRAIN_WINDOW_HOP) {
+                features = this.embed(frames.slice(offset, offset + NUM_FRAMES)); // addExample は内部でコピーを保持するので、渡したテンソルはすぐ破棄してよい
+                this.knn.addExample(features, label);
+                features.dispose();
+              }
             case 3:
             case "end":
               return _context4.stop();
           }
         }, _callee4, this);
       }));
-      function train(_x) {
+      function train(_x, _x2) {
         return _train.apply(this, arguments);
       }
       return train;
@@ -1575,7 +1637,7 @@ var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
               }
               return _context5.abrupt("return", '');
             case 3:
-              features = this.embed(this.frames);
+              features = this.embed(this.frames.slice(-NUM_FRAMES));
               _context5.prev = 4;
               _context5.next = 5;
               return this.knn.predictClass(features, KNN_K);
@@ -1653,6 +1715,12 @@ var SETUP_NOTICE_MIN_DURATION = 3000;
  * @type {number} [milliseconds]
  */
 var NOTICE_ERROR_DURATION = 5000;
+
+/**
+ * 録音終了メッセージの表示時間。
+ * @type {number} [milliseconds]
+ */
+var NOTICE_DONE_DURATION = 2000;
 
 /**
  * 学習・分類の入力元。
@@ -1756,9 +1824,16 @@ var ExtensionBlocks = /*#__PURE__*/function () {
 
     /**
      * 表示中の通知ダイアログ (セットアップ中・録音中など)。
-     * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number, minDuration: number}}
+     * @type {?{dialog: HTMLDialogElement, label: HTMLElement, gauge: HTMLElement, gaugeFill: HTMLElement,
+     *   openedAt: number, minDuration: number}}
      */
     this.notice = null;
+
+    /**
+     * 閉じる予定で表示中の通知ダイアログ (closeNotice 後の待ち時間中)。
+     * @type {?{dialog: HTMLDialogElement, timer: number}}
+     */
+    this.closingNotice = null;
   }
 
   /**
@@ -1877,22 +1952,71 @@ var ExtensionBlocks = /*#__PURE__*/function () {
         this.updateNotice(message, minDuration);
         return;
       }
+      if (this.closingNotice) {
+        // 前のダイアログが閉じ待ちなら、重ならないようにすぐ閉じる
+        clearTimeout(this.closingNotice.timer);
+        this.removeNoticeDialog(this.closingNotice.dialog);
+        this.closingNotice = null;
+      }
       var dialog = document.createElement('dialog');
       dialog.style.padding = '16px';
       // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
       dialog.style.position = 'fixed';
       dialog.style.top = '40%';
       dialog.style.zIndex = '1000';
-      var label = document.createTextNode(message);
+      var label = document.createElement('div');
+      label.textContent = message;
       dialog.appendChild(label);
+      // 録音の残り時間を示すゲージ (グレーの帯が左から赤く埋まる)。使うときだけ表示する。
+      var gauge = document.createElement('div');
+      gauge.style.display = 'none';
+      gauge.style.marginTop = '8px';
+      gauge.style.height = '10px';
+      gauge.style.minWidth = '240px';
+      gauge.style.background = '#cccccc';
+      gauge.style.borderRadius = '5px';
+      gauge.style.overflow = 'hidden';
+      var gaugeFill = document.createElement('div');
+      gaugeFill.style.width = '0%';
+      gaugeFill.style.height = '100%';
+      gaugeFill.style.background = '#e53935';
+      gaugeFill.style.transition = 'width 60ms linear';
+      gauge.appendChild(gaugeFill);
+      dialog.appendChild(gauge);
       document.body.appendChild(dialog);
       dialog.show();
       this.notice = {
         dialog: dialog,
         label: label,
+        gauge: gauge,
+        gaugeFill: gaugeFill,
         openedAt: Date.now(),
         minDuration: minDuration
       };
+    }
+
+    /**
+     * 通知ダイアログのゲージを表示して進み具合を反映する。
+     * @param {number} ratio - 進み具合 (0〜1)
+     */
+  }, {
+    key: "setNoticeProgress",
+    value: function setNoticeProgress(ratio) {
+      var notice = this.notice;
+      if (!notice) return;
+      notice.gauge.style.display = 'block';
+      notice.gaugeFill.style.width = "".concat(Math.round(Math.max(0, Math.min(1, ratio)) * 100), "%");
+    }
+
+    /**
+     * 通知ダイアログを DOM から取り除く。
+     * @param {HTMLDialogElement} dialog - ダイアログ
+     */
+  }, {
+    key: "removeNoticeDialog",
+    value: function removeNoticeDialog(dialog) {
+      if (dialog.open) dialog.close();
+      if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
     }
 
     /**
@@ -1919,18 +2043,25 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "closeNotice",
     value: function closeNotice(errorMessage) {
+      var _this = this;
       var notice = this.notice;
       if (!notice) return;
       this.notice = null;
       var delay = notice.minDuration - (Date.now() - notice.openedAt);
       if (errorMessage) {
         notice.label.textContent = errorMessage;
+        notice.gauge.style.display = 'none';
         delay = NOTICE_ERROR_DURATION;
       }
-      setTimeout(function () {
-        notice.dialog.close();
-        document.body.removeChild(notice.dialog);
+      var closing = {
+        dialog: notice.dialog,
+        timer: 0
+      };
+      closing.timer = setTimeout(function () {
+        if (_this.closingNotice === closing) _this.closingNotice = null;
+        _this.removeNoticeDialog(notice.dialog);
       }, Math.max(0, delay));
+      this.closingNotice = closing;
     }
 
     /**
@@ -1961,8 +2092,9 @@ var ExtensionBlocks = /*#__PURE__*/function () {
     }
 
     /**
-     * これから約 1 秒間のマイクの音を指定ラベルの例として学習する。
-     * 録音中はダイアログで知らせる。初回はライブラリ・モデルのロードとマイク起動が先に走る。
+     * これから約 2 秒間のマイクの音を指定ラベルの例として学習する。
+     * 録音中はダイアログに残り時間のゲージを出し、終わると「終了」に変えて 2 秒後に閉じる。
+     * 初回はライブラリ・モデルのロードとマイク起動が先に走る。
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
@@ -1970,6 +2102,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
     key: "mlTrainAudio",
     value: (function () {
       var _mlTrainAudio = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee2(label) {
+        var _this2 = this;
         var classifier, firstSetup, _t;
         return regenerator.wrap(function (_context2) {
           while (1) switch (_context2.prev = _context2.next) {
@@ -1988,9 +2121,18 @@ var ExtensionBlocks = /*#__PURE__*/function () {
                 default: 'Listening to the microphone...',
                 description: 'notice that the sound for training is being recorded'
               }), 0);
+              this.setNoticeProgress(0);
               _context2.next = 3;
-              return classifier.train(label);
+              return classifier.train(label, function (ratio) {
+                return _this2.setNoticeProgress(ratio);
+              });
             case 3:
+              this.setNoticeProgress(1);
+              this.updateNotice(formatMessage({
+                id: 'xcxml.listeningNotice.done',
+                default: 'Done',
+                description: 'notice that the recording for training has finished'
+              }), NOTICE_DONE_DURATION);
               this.closeNotice();
               _context2.next = 5;
               break;
@@ -2110,7 +2252,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "mlLabel",
     value: function mlLabel() {
-      var _this = this;
+      var _this3 = this;
       var classifier = this.getCurrentClassifier();
       if (!classifier || !classifier.hasExamples()) return '';
       if (Date.now() - this.mlLabelUpdatedTime < this.mlLabelUpdateIntervalTime) {
@@ -2121,14 +2263,14 @@ var ExtensionBlocks = /*#__PURE__*/function () {
           return classifier.classify(input);
         });
         this.mlClassifyRequest = classifying.then(function (label) {
-          _this.mlLastLabel = label;
-          _this.mlLabelUpdatedTime = Date.now();
+          _this3.mlLastLabel = label;
+          _this3.mlLabelUpdatedTime = Date.now();
           return label;
         }).catch(function (error) {
           console.error(error);
-          return _this.mlLastLabel;
+          return _this3.mlLastLabel;
         }).finally(function () {
-          _this.mlClassifyRequest = null;
+          _this3.mlClassifyRequest = null;
         });
       }
       return this.mlClassifyRequest;
@@ -2190,7 +2332,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
     key: "mlLoadData",
     value: (function () {
       var _mlLoadData = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4() {
-        var _this2 = this;
+        var _this4 = this;
         var inputDialog, dialogFace, label, fileForm, fileInput, cancelButton, confirmButton, file, _t3, _t4, _t5;
         return regenerator.wrap(function (_context4) {
           while (1) switch (_context4.prev = _context4.next) {
@@ -2261,7 +2403,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
                 inputDialog.showModal();
               }).finally(function () {
                 document.body.removeChild(inputDialog);
-                _this2.mlLoadDialogOpened = false;
+                _this4.mlLoadDialogOpened = false;
               });
             case 2:
               file = _context4.sent;
@@ -2397,7 +2539,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "openErrorDialog",
     value: function openErrorDialog(contentHtml) {
-      var _this3 = this;
+      var _this5 = this;
       if (this.errorDialogOpened) {
         // prevent to open multiple dialogs
         return Promise.resolve(null);
@@ -2441,7 +2583,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
         closeButton.focus();
       }).finally(function () {
         document.body.removeChild(errorDialog);
-        _this3.errorDialogOpened = false;
+        _this5.errorDialogOpened = false;
       });
     }
 
