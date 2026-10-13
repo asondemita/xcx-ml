@@ -19,6 +19,9 @@ var translations$1 = {
 }
 };
 
+// このファイルは scripts/generate-version.js が package.json から生成する。直接編集しないこと。
+var version = '0.2.0';
+
 /**
  * This is an extension for Xcratch.
  */
@@ -34,11 +37,11 @@ var formatMessage$1 = function formatMessage(messageData) {
 };
 var entry = {
   get name() {
-    return formatMessage$1({
+    return "".concat(formatMessage$1({
       defaultMessage: 'Machine Learning',
       description: 'Name for the "Machine Learning" extension',
       id: 'xcxml.entry.name'
-    });
+    }), " (v").concat(version, ")");
   },
   extensionId: 'xcxml',
   extensionURL: 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs',

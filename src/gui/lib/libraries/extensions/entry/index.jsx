@@ -5,6 +5,7 @@
 import iconURL from './entry-icon.png';
 import insetIconURL from './inset-icon.png';
 import translations from './translations.json';
+import version from './version';
 
 /**
  * Formatter to translate the messages in this extension.
@@ -16,11 +17,11 @@ let formatMessage = messageData => messageData.defaultMessage;
 
 const entry = {
     get name () {
-        return formatMessage({
+        return `${formatMessage({
             defaultMessage: 'Machine Learning',
             description: 'Name for the "Machine Learning" extension',
             id: 'xcxml.entry.name'
-        });
+        })} (v${version})`;
     },
     extensionId: 'xcxml',
     extensionURL: 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs',

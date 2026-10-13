@@ -91,6 +91,8 @@ npm run start      # 開発サーバー (http://localhost:8601)
 npm run build      # dist/xcx-ml.mjs をビルド
 ```
 
+バージョンは `package.json` の `version` で管理します。ビルド時に `scripts/generate-version.js` が `src/gui/lib/libraries/extensions/entry/version.js` を生成し、Xcratch の拡張機能一覧に「機械学習 (vX.Y.Z)」として表示されます。
+
 ## ライセンス
 
 MIT
