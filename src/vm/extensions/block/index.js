@@ -4,7 +4,6 @@ import translations from './translations.json';
 import blockIcon from './block-icon.png';
 
 import ImageClassifier from './image-classifier';
-import AudioClassifier from './audio-classifier';
 
 /**
  * Formatter which is used for translation.
@@ -37,49 +36,16 @@ const EXTENSION_ID = 'xcxml';
 let extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs';
 
 /**
- * 学習データファイルのフォーマット識別子
- * @type {string}
- */
-const DATA_FORMAT = 'xcx-g2s-knn';
-
-/**
- * 学習データファイルのバージョン。
- * 1: 画像の学習データのみ (model, labels)
- * 2: 1 に音声の学習データ (audio: {model, labels}) を追加。1 の読み手でも画像部分は読める。
- * @type {number}
- */
-const DATA_VERSION = 2;
-
-/**
  * 初回セットアップ通知ダイアログの最低表示時間。
  * @type {number} [milliseconds]
  */
 const SETUP_NOTICE_MIN_DURATION = 3000;
 
 /**
- * 失敗メッセージの表示時間。
+ * セットアップ失敗メッセージの表示時間。
  * @type {number} [milliseconds]
  */
-const NOTICE_ERROR_DURATION = 5000;
-
-/**
- * 録音終了メッセージの表示時間。
- * @type {number} [milliseconds]
- */
-const NOTICE_DONE_DURATION = 2000;
-
-/**
- * 学習・分類の入力元。
- * @readonly
- * @enum {string}
- */
-const InputMode = {
-    /** カメラ画像 */
-    CAMERA: 'camera',
-
-    /** マイクの音 */
-    MICROPHONE: 'microphone'
-};
+const SETUP_NOTICE_ERROR_DURATION = 5000;
 
 /**
  * States the video sensing activity can be set to.
@@ -98,7 +64,7 @@ const VideoState = {
 };
 
 /**
- * Scratch 3.0 blocks for machine learning (KNN image / sound classification).
+ * Scratch 3.0 blocks for machine learning (KNN image classification).
  */
 class ExtensionBlocks {
 
@@ -169,18 +135,6 @@ class ExtensionBlocks {
         this.imageClassifier = null;
 
         /**
-         * 音声分類器 (speech-commands + KNN)。マイクモードで最初に使われたときに生成する。
-         * @type {?AudioClassifier}
-         */
-        this.audioClassifier = null;
-
-        /**
-         * 学習・分類の入力元。既存プロジェクトとの互換性のため初期値はカメラ。
-         * @type {InputMode}
-         */
-        this.inputMode = InputMode.CAMERA;
-
-        /**
          * 実行中の分類処理。モニターなどからの連続呼び出しを 1 つにまとめる。
          * @type {?Promise<string>}
          */
@@ -217,17 +171,10 @@ class ExtensionBlocks {
         this.errorDialogOpened = false;
 
         /**
-         * 表示中の通知ダイアログ (セットアップ中・録音中など)。
-         * @type {?{dialog: HTMLDialogElement, label: HTMLElement, gauge: HTMLElement, gaugeFill: HTMLElement,
-         *   openedAt: number, minDuration: number}}
+         * 表示中のセットアップ通知ダイアログ。
+         * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number}}
          */
-        this.notice = null;
-
-        /**
-         * 閉じる予定で表示中の通知ダイアログ (closeNotice 後の待ち時間中)。
-         * @type {?{dialog: HTMLDialogElement, timer: number}}
-         */
-        this.closingNotice = null;
+        this.setupNotice = null;
     }
 
     /**
@@ -239,33 +186,6 @@ class ExtensionBlocks {
             this.imageClassifier = new ImageClassifier();
         }
         return this.imageClassifier;
-    }
-
-    /**
-     * 音声分類器を返す。まだ無ければ生成する。
-     * @returns {AudioClassifier} 音声分類器
-     */
-    getAudioClassifier () {
-        if (!this.audioClassifier) {
-            this.audioClassifier = new AudioClassifier();
-        }
-        return this.audioClassifier;
-    }
-
-    /**
-     * 今の入力モードに対応する分類器を返す (未生成なら null)。
-     * @returns {?ImageClassifier|AudioClassifier} 分類器
-     */
-    getCurrentClassifier () {
-        return this.inputMode === InputMode.MICROPHONE ? this.audioClassifier : this.imageClassifier;
-    }
-
-    /**
-     * 分類結果のキャッシュを捨てる。
-     */
-    clearLabelCache () {
-        this.mlLastLabel = '';
-        this.mlLabelUpdatedTime = 0;
     }
 
     /**
@@ -288,169 +208,51 @@ class ExtensionBlocks {
     }
 
     /**
-     * 処理中であることを知らせる非モーダルのダイアログを表示する。
-     * 閉じるのは closeNotice()。すでに表示中なら文言だけ差し替える。
-     * @param {string} message - 表示する文言
-     * @param {number} minDuration - 最低表示時間 [milliseconds]
+     * 初回セットアップ中であることを知らせるダイアログを表示する。
+     * 閉じるのは closeSetupNotice()。すでに表示中なら何もしない。
      */
-    openNotice (message, minDuration) {
-        if (this.notice) {
-            this.updateNotice(message, minDuration);
-            return;
-        }
-        if (this.closingNotice) {
-            // 前のダイアログが閉じ待ちなら、重ならないようにすぐ閉じる
-            clearTimeout(this.closingNotice.timer);
-            this.removeNoticeDialog(this.closingNotice.dialog);
-            this.closingNotice = null;
-        }
+    openSetupNotice () {
+        if (this.setupNotice) return;
         const dialog = document.createElement('dialog');
         dialog.style.padding = '16px';
         // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
         dialog.style.position = 'fixed';
         dialog.style.top = '40%';
         dialog.style.zIndex = '1000';
-        const label = document.createElement('div');
-        label.textContent = message;
-        dialog.appendChild(label);
-        // 録音の残り時間を示すゲージ (グレーの帯が左から赤く埋まる)。使うときだけ表示する。
-        const gauge = document.createElement('div');
-        gauge.style.display = 'none';
-        gauge.style.marginTop = '8px';
-        gauge.style.height = '10px';
-        gauge.style.minWidth = '240px';
-        gauge.style.background = '#cccccc';
-        gauge.style.borderRadius = '5px';
-        gauge.style.overflow = 'hidden';
-        const gaugeFill = document.createElement('div');
-        gaugeFill.style.width = '0%';
-        gaugeFill.style.height = '100%';
-        gaugeFill.style.background = '#e53935';
-        gaugeFill.style.transition = 'width 60ms linear';
-        gauge.appendChild(gaugeFill);
-        dialog.appendChild(gauge);
-        document.body.appendChild(dialog);
-        dialog.show();
-        this.notice = {dialog, label, gauge, gaugeFill, openedAt: Date.now(), minDuration};
-    }
-
-    /**
-     * 通知ダイアログのゲージを表示して進み具合を反映する。
-     * @param {number} ratio - 進み具合 (0〜1)
-     */
-    setNoticeProgress (ratio) {
-        const notice = this.notice;
-        if (!notice) return;
-        notice.gauge.style.display = 'block';
-        notice.gaugeFill.style.width = `${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%`;
-    }
-
-    /**
-     * 通知ダイアログを DOM から取り除く。
-     * @param {HTMLDialogElement} dialog - ダイアログ
-     */
-    removeNoticeDialog (dialog) {
-        if (dialog.open) dialog.close();
-        if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
-    }
-
-    /**
-     * 表示中の通知ダイアログの文言を差し替え、最低表示時間を数え直す。
-     * @param {string} message - 表示する文言
-     * @param {number} minDuration - 最低表示時間 [milliseconds]
-     */
-    updateNotice (message, minDuration) {
-        const notice = this.notice;
-        if (!notice) return;
-        notice.label.textContent = message;
-        notice.openedAt = Date.now();
-        notice.minDuration = minDuration;
-    }
-
-    /**
-     * 通知ダイアログを閉じる。
-     * 成功時は最低表示時間の残りを待ってから閉じる。
-     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
-     * @param {?string} errorMessage - 失敗したときに表示する文言
-     */
-    closeNotice (errorMessage) {
-        const notice = this.notice;
-        if (!notice) return;
-        this.notice = null;
-        let delay = notice.minDuration - (Date.now() - notice.openedAt);
-        if (errorMessage) {
-            notice.label.textContent = errorMessage;
-            notice.gauge.style.display = 'none';
-            delay = NOTICE_ERROR_DURATION;
-        }
-        const closing = {dialog: notice.dialog, timer: 0};
-        closing.timer = setTimeout(() => {
-            if (this.closingNotice === closing) this.closingNotice = null;
-            this.removeNoticeDialog(notice.dialog);
-        }, Math.max(0, delay));
-        this.closingNotice = closing;
-    }
-
-    /**
-     * @returns {string} 初回セットアップ中の文言
-     */
-    get setupNoticeMessage () {
-        return formatMessage({
+        const label = document.createTextNode(formatMessage({
             id: 'xcxml.setupNotice.message',
             default: 'Preparing the machine learning environment. This may take a while...',
             description: 'notice that the first setup takes a while'
-        });
+        }));
+        dialog.appendChild(label);
+        document.body.appendChild(dialog);
+        dialog.show();
+        this.setupNotice = {dialog, label, openedAt: Date.now()};
     }
 
     /**
-     * 今の入力モードを指定ラベルの例として学習する。
-     * @param {string} label - ラベル
-     * @returns {Promise} 学習完了で resolve する Promise
+     * セットアップ通知ダイアログを閉じる。
+     * 成功時は最低表示時間の残りを待ってから閉じる。
+     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
+     * @param {?Error} error - セットアップに失敗したときのエラー
      */
-    mlTrain (label) {
-        if (this.inputMode === InputMode.MICROPHONE) {
-            return this.mlTrainAudio(label);
+    closeSetupNotice (error) {
+        const notice = this.setupNotice;
+        if (!notice) return;
+        this.setupNotice = null;
+        let delay = SETUP_NOTICE_MIN_DURATION - (Date.now() - notice.openedAt);
+        if (error) {
+            notice.label.textContent = formatMessage({
+                id: 'xcxml.setupNotice.failed',
+                default: 'Setup failed. Check the network connection and the camera, then click the block again.',
+                description: 'message when the first setup failed'
+            });
+            delay = SETUP_NOTICE_ERROR_DURATION;
         }
-        return this.mlTrainImage(label);
-    }
-
-    /**
-     * これから約 2 秒間のマイクの音を指定ラベルの例として学習する。
-     * 録音中はダイアログに残り時間のゲージを出し、終わると「終了」に変えて 2 秒後に閉じる。
-     * 初回はライブラリ・モデルのロードとマイク起動が先に走る。
-     * @param {string} label - ラベル
-     * @returns {Promise} 学習完了で resolve する Promise
-     */
-    async mlTrainAudio (label) {
-        const classifier = this.getAudioClassifier();
-        const firstSetup = !classifier.isReady();
-        if (firstSetup) {
-            this.openNotice(this.setupNoticeMessage, SETUP_NOTICE_MIN_DURATION);
-        }
-        try {
-            await classifier.prepare();
-            this.openNotice(formatMessage({
-                id: 'xcxml.listeningNotice.message',
-                default: 'Listening to the microphone...',
-                description: 'notice that the sound for training is being recorded'
-            }), 0);
-            this.setNoticeProgress(0);
-            await classifier.train(label, ratio => this.setNoticeProgress(ratio));
-            this.setNoticeProgress(1);
-            this.updateNotice(formatMessage({
-                id: 'xcxml.listeningNotice.done',
-                default: 'Done',
-                description: 'notice that the recording for training has finished'
-            }), NOTICE_DONE_DURATION);
-            this.closeNotice();
-        } catch (error) {
-            this.closeNotice(formatMessage({
-                id: 'xcxml.setupNotice.failedMicrophone',
-                default: 'Setup failed. Check the network connection and the microphone, then click the block again.',
-                description: 'message when the first setup with microphone failed'
-            }));
-            console.error(error);
-        }
+        setTimeout(() => {
+            notice.dialog.close();
+            document.body.removeChild(notice.dialog);
+        }, Math.max(0, delay));
     }
 
     /**
@@ -459,25 +261,21 @@ class ExtensionBlocks {
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
-    async mlTrainImage (label) {
+    async mlTrain (label) {
         const classifier = this.getImageClassifier();
         const firstSetup = !classifier.isReady();
         if (firstSetup) {
-            this.openNotice(this.setupNoticeMessage, SETUP_NOTICE_MIN_DURATION);
+            this.openSetupNotice();
         }
         try {
             const input = await this.getVideoInput();
             await classifier.train(input, label);
             if (firstSetup) {
-                this.closeNotice();
+                this.closeSetupNotice();
             }
         } catch (error) {
             if (firstSetup) {
-                this.closeNotice(formatMessage({
-                    id: 'xcxml.setupNotice.failed',
-                    default: 'Setup failed. Check the network connection and the camera, then click the block again.',
-                    description: 'message when the first setup failed'
-                }));
+                this.closeSetupNotice(error);
             }
             console.error(error);
         }
@@ -508,23 +306,21 @@ class ExtensionBlocks {
     }
 
     /**
-     * 今の入力 (カメラ画像またはマイクの音) を分類してラベルを返す。
-     * 未学習のときはカメラ・マイクを起動せずに空文字列を返す。
+     * 現在のカメラ画像を分類してラベルを返す。
+     * 未学習のときはカメラを起動せずに空文字列を返す。
      * 短時間に連続で呼ばれた場合 (ステージのモニターなど) はキャッシュを返し、
      * 推論が過剰に走らないようにする。
      * @returns {string|Promise<string>} 分類されたラベル
      */
     mlLabel () {
-        const classifier = this.getCurrentClassifier();
+        const classifier = this.imageClassifier;
         if (!classifier || !classifier.hasExamples()) return '';
         if ((Date.now() - this.mlLabelUpdatedTime) < this.mlLabelUpdateIntervalTime) {
             return this.mlLastLabel;
         }
         if (!this.mlClassifyRequest) {
-            const classifying = this.inputMode === InputMode.MICROPHONE ?
-                classifier.classify() :
-                this.getVideoInput().then(input => classifier.classify(input));
-            this.mlClassifyRequest = classifying
+            this.mlClassifyRequest = this.getVideoInput()
+                .then(input => classifier.classify(input))
                 .then(label => {
                     this.mlLastLabel = label;
                     this.mlLabelUpdatedTime = Date.now();
@@ -542,39 +338,26 @@ class ExtensionBlocks {
     }
 
     /**
-     * 学習した内容 (画像・音声の両方) をすべてリセットする。
+     * 学習した内容をすべてリセットする。
      */
     mlReset () {
         if (this.imageClassifier) {
             this.imageClassifier.reset();
         }
-        if (this.audioClassifier) {
-            this.audioClassifier.reset();
-        }
-        this.clearLabelCache();
+        this.mlLastLabel = '';
+        this.mlLabelUpdatedTime = 0;
     }
 
     /**
-     * 学習データ (画像・音声の両方) を JSON ファイルとして保存 (ダウンロード) する。
+     * 学習データを JSON ファイルとして保存 (ダウンロード) する。
      */
     mlSaveData () {
-        const imageTrained = this.imageClassifier && this.imageClassifier.hasExamples();
-        const audioTrained = this.audioClassifier && this.audioClassifier.hasExamples();
-        if (!imageTrained && !audioTrained) {
+        const classifier = this.imageClassifier;
+        if (!classifier || !classifier.hasExamples()) {
             // 学習データが無いときは何もしない
             return;
         }
-        // 画像のデータはバージョン 1 と同じ位置 (model, labels) に置き、古い読み手との互換性を保つ
-        const json = JSON.stringify(Object.assign(
-            {
-                format: DATA_FORMAT,
-                version: DATA_VERSION
-            },
-            this.getImageClassifier().exportDataset(),
-            {
-                audio: this.getAudioClassifier().exportDataset()
-            }
-        ));
+        const json = classifier.serialize();
         const blob = new Blob([json], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
@@ -660,8 +443,10 @@ class ExtensionBlocks {
             });
         if (!file) return;
         try {
-            await this.restoreLearningData(JSON.parse(await file.text()));
-            this.clearLabelCache();
+            const parsed = JSON.parse(await file.text());
+            await this.getImageClassifier().restore(parsed);
+            this.mlLastLabel = '';
+            this.mlLabelUpdatedTime = 0;
         } catch (error) {
             console.error(error);
             this.openErrorDialog(formatMessage({
@@ -669,43 +454,6 @@ class ExtensionBlocks {
                 default: 'This file is not learning data for this extension.',
                 description: 'error message for invalid learning data file'
             }));
-        }
-    }
-
-    /**
-     * 学習データファイルの内容を画像・音声の分類器に復元する。
-     * ファイルに含まれない側の学習内容は消去する。
-     * @param {object} parsed - JSON.parse 済みの学習データ
-     * @returns {Promise} 復元完了で resolve する Promise
-     */
-    async restoreLearningData (parsed) {
-        if (!parsed || parsed.format !== DATA_FORMAT || (!parsed.labels && !parsed.audio)) {
-            throw new Error('invalid learning data format');
-        }
-        const imageData = {model: parsed.model, labels: parsed.labels || {}};
-        const audioData = parsed.audio || {labels: {}};
-        const imageClassifier = this.getImageClassifier();
-        const audioClassifier = this.getAudioClassifier();
-        // 片方だけ復元されて中途半端にならないよう、先に両方を検査する
-        imageClassifier.checkDataset(imageData);
-        audioClassifier.checkDataset(audioData);
-        await imageClassifier.importDataset(imageData);
-        await audioClassifier.importDataset(audioData);
-    }
-
-    /**
-     * 学習・分類の入力元を切り替える。
-     * マイクから切り替えたときはマイクを停止する。カメラの表示はビデオブロックに任せる。
-     * @param {object} args - the block's arguments.
-     * @param {string} args.INPUT - 入力元 (InputMode)
-     */
-    setInputMode (args) {
-        const mode = args.INPUT === InputMode.MICROPHONE ? InputMode.MICROPHONE : InputMode.CAMERA;
-        if (mode === this.inputMode) return;
-        this.inputMode = mode;
-        this.clearLabelCache();
-        if (mode !== InputMode.MICROPHONE && this.audioClassifier) {
-            this.audioClassifier.stopMicrophone();
         }
     }
 
@@ -861,22 +609,6 @@ class ExtensionBlocks {
                 },
                 '---',
                 {
-                    opcode: 'setInputMode',
-                    blockType: BlockType.COMMAND,
-                    text: formatMessage({
-                        id: 'xcxml.setInput',
-                        default: 'set input to [INPUT]',
-                        description: 'select camera or microphone as the input for learning and recognition'
-                    }),
-                    arguments: {
-                        INPUT: {
-                            type: ArgumentType.STRING,
-                            menu: 'INPUT',
-                            defaultValue: InputMode.CAMERA
-                        }
-                    }
-                },
-                {
                     opcode: 'videoToggle',
                     blockType: BlockType.COMMAND,
                     text: formatMessage({
@@ -894,27 +626,6 @@ class ExtensionBlocks {
                 }
             ],
             menus: {
-                INPUT: {
-                    acceptReporters: true,
-                    items: [
-                        {
-                            text: formatMessage({
-                                id: 'xcxml.input.camera',
-                                default: 'camera',
-                                description: 'camera option of the "set input to [INPUT]" block'
-                            }),
-                            value: InputMode.CAMERA
-                        },
-                        {
-                            text: formatMessage({
-                                id: 'xcxml.input.microphone',
-                                default: 'microphone',
-                                description: 'microphone option of the "set input to [INPUT]" block'
-                            }),
-                            value: InputMode.MICROPHONE
-                        }
-                    ]
-                },
                 VIDEO_STATE: {
                     acceptReporters: true,
                     items: [
