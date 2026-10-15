@@ -13,7 +13,13 @@
     "xcxml.loadDialog.cancel": "cancel",
     "xcxml.loadInvalidFile": "This file is not learning data for this extension.",
     "xcxml.setupNotice.message": "Preparing the machine learning environment. This may take a while...",
-    "xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again."
+    "xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again.",
+    "xcxml.setInput": "set input to [INPUT]",
+    "xcxml.input.camera": "camera",
+    "xcxml.input.microphone": "microphone",
+    "xcxml.listeningNotice.message": "Listening to the microphone...",
+    "xcxml.setupNotice.failedMicrophone": "Setup failed. Check the network connection and the microphone, then click the block again.",
+    "xcxml.listeningNotice.done": "Done"
   },
   "ja": {
     "xcxml.name": "機械学習",
@@ -29,7 +35,13 @@
     "xcxml.loadDialog.cancel": "キャンセル",
     "xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。",
     "xcxml.setupNotice.message": "環境構築に少し時間がかかります…",
-    "xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。"
+    "xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。",
+    "xcxml.setInput": "入力を[INPUT]にする",
+    "xcxml.input.camera": "カメラ",
+    "xcxml.input.microphone": "マイク",
+    "xcxml.listeningNotice.message": "マイクの音を聞いています…",
+    "xcxml.setupNotice.failedMicrophone": "環境構築に失敗しました。ネット接続とマイクを確認して、もう一度ブロックをクリックしてください。",
+    "xcxml.listeningNotice.done": "終了"
   },
   "ja-Hira": {
     "xcxml.name": "きかいがくしゅう",
@@ -45,6 +57,12 @@
     "xcxml.loadDialog.cancel": "キャンセル",
     "xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。",
     "xcxml.setupNotice.message": "かんきょうこうちくにすこしじかんがかかります…",
-    "xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。"
+    "xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。",
+    "xcxml.setInput": "にゅうりょくを[INPUT]にする",
+    "xcxml.input.camera": "カメラ",
+    "xcxml.input.microphone": "マイク",
+    "xcxml.listeningNotice.message": "マイクのおとをきいています…",
+    "xcxml.setupNotice.failedMicrophone": "かんきょうこうちくにしっぱいしました。ネットせつぞくとマイクをたしかめて、もういちどブロックをクリックしてください。",
+    "xcxml.listeningNotice.done": "おわり"
   }
 }

@@ -4,20 +4,23 @@ var img$1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtA
 
 var en$1 = {
 	"xcxml.entry.name": "Machine Learning",
-	"xcxml.entry.description": "Recognize camera images with machine learning (KNN)."
+	"xcxml.entry.description": "Recognize camera images and microphone sounds with machine learning (KNN)."
 };
 var ja$1 = {
 	"xcxml.entry.name": "機械学習",
-	"xcxml.entry.description": "機械学習(KNN)でカメラの画像を認識する。"
+	"xcxml.entry.description": "機械学習(KNN)でカメラの画像やマイクの音を認識する。"
 };
 var translations$1 = {
 	en: en$1,
 	ja: ja$1,
 	"ja-Hira": {
 	"xcxml.entry.name": "きかいがくしゅう",
-	"xcxml.entry.description": "きかいがくしゅう(KNN)でカメラのがぞうをにんしきする。"
+	"xcxml.entry.description": "きかいがくしゅう(KNN)でカメラのがぞうやマイクのおとをにんしきする。"
 }
 };
+
+// このファイルは scripts/generate-version.js が package.json から生成する。直接編集しないこと。
+var version = '0.2.0';
 
 /**
  * This is an extension for Xcratch.
@@ -46,11 +49,12 @@ var entry = {
   iconURL: img$2,
   insetIconURL: img$1,
   get description() {
-    return formatMessage$1({
-      defaultMessage: 'Recognize camera images with machine learning (KNN).',
+    // 説明文の末尾にバージョンを付けて、利用者が新旧を見分けられるようにする
+    return "".concat(formatMessage$1({
+      defaultMessage: 'Recognize camera images and microphone sounds with machine learning (KNN).',
       description: 'Description for the "Machine Learning" extension',
       id: 'xcxml.entry.description'
-    });
+    }), " (v").concat(version, ")");
   },
   featured: true,
   disabled: false,
@@ -570,7 +574,13 @@ var en = {
 	"xcxml.loadDialog.cancel": "cancel",
 	"xcxml.loadInvalidFile": "This file is not learning data for this extension.",
 	"xcxml.setupNotice.message": "Preparing the machine learning environment. This may take a while...",
-	"xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again."
+	"xcxml.setupNotice.failed": "Setup failed. Check the network connection and the camera, then click the block again.",
+	"xcxml.setInput": "set input to [INPUT]",
+	"xcxml.input.camera": "camera",
+	"xcxml.input.microphone": "microphone",
+	"xcxml.listeningNotice.message": "Listening to the microphone...",
+	"xcxml.setupNotice.failedMicrophone": "Setup failed. Check the network connection and the microphone, then click the block again.",
+	"xcxml.listeningNotice.done": "Done"
 };
 var ja = {
 	"xcxml.name": "機械学習",
@@ -586,7 +596,13 @@ var ja = {
 	"xcxml.loadDialog.cancel": "キャンセル",
 	"xcxml.loadInvalidFile": "このファイルはこの拡張機能の学習データではありません。",
 	"xcxml.setupNotice.message": "環境構築に少し時間がかかります…",
-	"xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。"
+	"xcxml.setupNotice.failed": "環境構築に失敗しました。ネット接続とカメラを確認して、もう一度ブロックをクリックしてください。",
+	"xcxml.setInput": "入力を[INPUT]にする",
+	"xcxml.input.camera": "カメラ",
+	"xcxml.input.microphone": "マイク",
+	"xcxml.listeningNotice.message": "マイクの音を聞いています…",
+	"xcxml.setupNotice.failedMicrophone": "環境構築に失敗しました。ネット接続とマイクを確認して、もう一度ブロックをクリックしてください。",
+	"xcxml.listeningNotice.done": "終了"
 };
 var translations = {
 	en: en,
@@ -605,17 +621,266 @@ var translations = {
 	"xcxml.loadDialog.cancel": "キャンセル",
 	"xcxml.loadInvalidFile": "このファイルはこのかくちょうきのうのがくしゅうデータではありません。",
 	"xcxml.setupNotice.message": "かんきょうこうちくにすこしじかんがかかります…",
-	"xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。"
+	"xcxml.setupNotice.failed": "かんきょうこうちくにしっぱいしました。ネットせつぞくとカメラをたしかめて、もういちどブロックをクリックしてください。",
+	"xcxml.setInput": "にゅうりょくを[INPUT]にする",
+	"xcxml.input.camera": "カメラ",
+	"xcxml.input.microphone": "マイク",
+	"xcxml.listeningNotice.message": "マイクのおとをきいています…",
+	"xcxml.setupNotice.failedMicrophone": "かんきょうこうちくにしっぱいしました。ネットせつぞくとマイクをたしかめて、もういちどブロックをクリックしてください。",
+	"xcxml.listeningNotice.done": "おわり"
 }
 };
 
 var img = "data:image/png;base64,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";
 
+function _assertThisInitialized(e) {
+  if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  return e;
+}
+
+function _possibleConstructorReturn(t, e) {
+  if (e && ("object" == _typeof$1(e) || "function" == typeof e)) return e;
+  if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
+  return _assertThisInitialized(t);
+}
+
+function _getPrototypeOf(t) {
+  return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) {
+    return t.__proto__ || Object.getPrototypeOf(t);
+  }, _getPrototypeOf(t);
+}
+
+function _setPrototypeOf(t, e) {
+  return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
+    return t.__proto__ = e, t;
+  }, _setPrototypeOf(t, e);
+}
+
+function _inherits(t, e) {
+  if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
+  t.prototype = Object.create(e && e.prototype, {
+    constructor: {
+      value: t,
+      writable: !0,
+      configurable: !0
+    }
+  }), Object.defineProperty(t, "prototype", {
+    writable: !1
+  }), e && _setPrototypeOf(t, e);
+}
+
 /**
- * 画像分類器 (MobileNet 特徴量 + KNN による転移学習)。
+ * 特徴抽出モデル + KNN 分類器の共通部分。
  *
- * TensorFlow.js 一式は最初に使われたときに動的にロードするので、
- * ML ブロックを使わないプロジェクトではメモリもネットワークも消費しない。
+ * サブクラスは loadModel() で特徴抽出モデルと KNN 分類器を用意し、
+ * 入力に応じた train() / classify() を実装する。
+ * 学習データの消去・書き出し・復元はここで共通に扱う。
+ */
+
+/**
+ * KNN 分類時に参照する近傍数
+ * @type {number}
+ */
+var KNN_K = 3;
+var KnnClassifierBase = /*#__PURE__*/function () {
+  /**
+   * @param {string} modelId - 特徴抽出に使うモデルの識別子。
+   * モデルが変わると特徴量の互換性がなくなるため、学習データに記録して復元時に検査する。
+   * @param {string} assetsBaseURL - ライブラリ・モデルの読み込み元 (末尾 / 付き)
+   */
+  function KnnClassifierBase(modelId, assetsBaseURL) {
+    _classCallCheck(this, KnnClassifierBase);
+    /**
+     * 特徴抽出モデルの識別子
+     * @type {string}
+     */
+    this.modelId = modelId;
+
+    /**
+     * ライブラリ・モデルの読み込み元
+     * @type {string}
+     */
+    this.assetsBaseURL = assetsBaseURL;
+
+    /**
+     * ライブラリとモデルのロード処理。一度だけ実行する。
+     * @type {?Promise}
+     */
+    this.loading = null;
+
+    /**
+     * ロードが完了しているかどうか
+     * @type {boolean}
+     */
+    this.ready = false;
+
+    /**
+     * KNN 分類器
+     */
+    this.knn = null;
+  }
+
+  /**
+   * ライブラリとモデルをロードする (未ロードのときだけ)。
+   * @returns {Promise} 準備完了で resolve する Promise
+   */
+  return _createClass(KnnClassifierBase, [{
+    key: "load",
+    value: function load() {
+      var _this = this;
+      if (!this.loading) {
+        this.loading = this.loadModel().then(function () {
+          _this.ready = true;
+        }).catch(function (error) {
+          // 失敗したら次回の呼び出しでリトライできるようにする
+          _this.loading = null;
+          throw error;
+        });
+      }
+      return this.loading;
+    }
+
+    /**
+     * 特徴抽出モデルと KNN 分類器を用意する。サブクラスで実装する。
+     * @returns {Promise} 準備完了で resolve する Promise
+     */
+  }, {
+    key: "loadModel",
+    value: function loadModel() {
+      return Promise.reject(new Error('loadModel() is not implemented'));
+    }
+
+    /**
+     * ライブラリとモデルのロードが完了しているかどうか。
+     * @returns {boolean} 準備完了なら true
+     */
+  }, {
+    key: "isReady",
+    value: function isReady() {
+      return this.ready;
+    }
+
+    /**
+     * 学習済みの例があるかどうか。
+     * @returns {boolean} 1 つ以上のラベルが学習済みなら true
+     */
+  }, {
+    key: "hasExamples",
+    value: function hasExamples() {
+      return !!this.knn && this.knn.getNumClasses() > 0;
+    }
+
+    /**
+     * 学習した例をすべて消去する。保持していたテンソルも解放される。
+     */
+  }, {
+    key: "reset",
+    value: function reset() {
+      if (this.knn) {
+        this.knn.clearAllClasses();
+      }
+    }
+
+    /**
+     * 学習データを JSON 化できる形で書き出す。
+     * @returns {{model: string, labels: object}} 学習データ
+     */
+  }, {
+    key: "exportDataset",
+    value: function exportDataset() {
+      var labels = {};
+      if (this.knn) {
+        var dataset = this.knn.getClassifierDataset();
+        for (var _i = 0, _Object$keys = Object.keys(dataset); _i < _Object$keys.length; _i++) {
+          var label = _Object$keys[_i];
+          var examples = dataset[label];
+          labels[label] = {
+            shape: examples.shape,
+            data: Array.from(examples.dataSync())
+          };
+        }
+      }
+      return {
+        model: this.modelId,
+        labels: labels
+      };
+    }
+
+    /**
+     * 学習データがこの分類器で復元できる形かどうか検査する。
+     * @param {object} data - exportDataset() 形式の学習データ
+     * @throws {Error} 復元できない形のとき
+     */
+  }, {
+    key: "checkDataset",
+    value: function checkDataset(data) {
+      if (!data || _typeof$1(data.labels) !== 'object' || data.labels === null) {
+        throw new Error('invalid learning data format');
+      }
+      var labels = Object.keys(data.labels);
+      if (labels.length === 0) return;
+      if (data.model !== this.modelId) {
+        // 別のモデルで作った特徴量は互換性がない
+        throw new Error("incompatible model: ".concat(data.model));
+      }
+      for (var _i2 = 0, _labels = labels; _i2 < _labels.length; _i2++) {
+        var label = _labels[_i2];
+        var examples = data.labels[label];
+        if (!examples || !Array.isArray(examples.shape) || !Array.isArray(examples.data)) {
+          throw new Error("invalid examples for label: ".concat(label));
+        }
+      }
+    }
+
+    /**
+     * 書き出した学習データを復元する。今の学習内容は破棄される。
+     * 例が 1 つも無いデータのときはモデルをロードせず、学習内容の消去だけ行う。
+     * @param {object} data - exportDataset() 形式の学習データ
+     * @returns {Promise} 復元完了で resolve する Promise
+     */
+  }, {
+    key: "importDataset",
+    value: (function () {
+      var _importDataset = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee(data) {
+        var dataset, _i3, _Object$keys2, label, examples;
+        return regenerator.wrap(function (_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              this.checkDataset(data);
+              if (!(Object.keys(data.labels).length === 0)) {
+                _context.next = 1;
+                break;
+              }
+              this.reset();
+              return _context.abrupt("return");
+            case 1:
+              _context.next = 2;
+              return this.load();
+            case 2:
+              dataset = {};
+              for (_i3 = 0, _Object$keys2 = Object.keys(data.labels); _i3 < _Object$keys2.length; _i3++) {
+                label = _Object$keys2[_i3];
+                examples = data.labels[label];
+                dataset[label] = window.tf.tensor2d(examples.data, examples.shape);
+              }
+              this.knn.clearAllClasses();
+              this.knn.setClassifierDataset(dataset);
+            case 3:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, this);
+      }));
+      function importDataset(_x) {
+        return _importDataset.apply(this, arguments);
+      }
+      return importDataset;
+    }())
+  }]);
+}();
+
+/**
+ * TensorFlow.js 一式のロード処理。画像分類器と音声分類器で共有する。
  *
  * ライブラリとモデルは拡張機能と同じ GitHub Pages から配信する。
  * 学校のネットワークフィルタは CDN (cdn.jsdelivr.net) や TensorFlow Hub を
@@ -627,20 +892,15 @@ var img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAA
  * https://xcratch.699.jp/ext/?url=asondemita/xcx-ml/dist/xcx-ml.mjs) 経由で
  * 配信しており、その環境では GitHub Pages 自体がフィルタで遮られていることが
  * あるため、ライブラリとモデルも同じプロキシを通して読む。
- *
- * ML2Scratch と違い、推論のたびに生成される特徴量テンソルを必ず dispose して
- * メモリリークを防ぐ。分類の常時ループも持たない（呼ばれたときだけ推論する）。
  */
 
 /**
- * 拡張機能本体の URL から読み込み元 (ライブラリ・モデル) が見つからないときの既定値
+ * 拡張機能本体の URL から読み込み元が見つからないときの既定値
  * @type {string}
  */
 var DEFAULT_ASSETS_BASE_URL = 'https://asondemita.github.io/xcx-ml/';
 var TFJS_PATH = 'libs/tf.min.js';
 var KNN_CLASSIFIER_PATH = 'libs/knn-classifier.min.js';
-var MOBILENET_PATH = 'libs/mobilenet.min.js';
-var MOBILENET_MODEL_PATH = 'models/mobilenet_v2_050_224/model.json';
 
 /**
  * 拡張機能本体の URL から、ライブラリ・モデルの読み込み元 (末尾 / 付き) を求める。
@@ -655,26 +915,6 @@ var assetsBaseURLFrom = function assetsBaseURLFrom(extensionURL) {
   var matched = /^(.*\/)dist\/[^/]+\.mjs$/.exec(extensionURL || '');
   return matched ? matched[1] : DEFAULT_ASSETS_BASE_URL;
 };
-
-/**
- * KNN 分類時に参照する近傍数
- * @type {number}
- */
-var KNN_K = 3;
-
-/**
- * 学習データファイルのフォーマット識別子
- * @type {string}
- */
-var DATA_FORMAT = 'xcx-g2s-knn';
-
-/**
- * 特徴抽出に使うモデルの識別子。
- * モデルが変わると特徴量の互換性がなくなるため、学習データファイルに記録して
- * 読み込み時に検査する。
- * @type {string}
- */
-var MODEL_ID = 'mobilenet_v2_050_224';
 
 /**
  * <script> タグでスクリプトをロードする。
@@ -694,121 +934,129 @@ var loadScript = function loadScript(url) {
     document.head.appendChild(script);
   });
 };
-var ImageClassifier = /*#__PURE__*/function () {
+
+/**
+ * 実行中の TensorFlow.js ロード処理。複数の分類器から同時に呼ばれても 1 回にまとめる。
+ * @type {?Promise}
+ */
+var tensorFlowLoading = null;
+
+/**
+ * TensorFlow.js と KNN 分類器ライブラリをロードする (未ロードのときだけ)。
+ * @param {string} assetsBaseURL - ライブラリの読み込み元 (末尾 / 付き)
+ * @returns {Promise} ロード完了で resolve する Promise
+ */
+var loadTensorFlow = function loadTensorFlow(assetsBaseURL) {
+  if (!tensorFlowLoading) {
+    tensorFlowLoading = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee() {
+      return regenerator.wrap(function (_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            if (window.tf) {
+              _context.next = 1;
+              break;
+            }
+            _context.next = 1;
+            return loadScript(assetsBaseURL + TFJS_PATH);
+          case 1:
+            if (window.knnClassifier) {
+              _context.next = 2;
+              break;
+            }
+            _context.next = 2;
+            return loadScript(assetsBaseURL + KNN_CLASSIFIER_PATH);
+          case 2:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee);
+    }))().catch(function (error) {
+      // 失敗したら次回の呼び出しでリトライできるようにする
+      tensorFlowLoading = null;
+      throw error;
+    });
+  }
+  return tensorFlowLoading;
+};
+
+function _callSuper$1(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct$1() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _isNativeReflectConstruct$1() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct$1 = function _isNativeReflectConstruct() { return !!t; })(); }
+var MOBILENET_PATH = 'libs/mobilenet.min.js';
+var MOBILENET_MODEL_PATH = 'models/mobilenet_v2_050_224/model.json';
+
+/**
+ * 特徴抽出に使うモデルの識別子
+ * @type {string}
+ */
+var MODEL_ID$1 = 'mobilenet_v2_050_224';
+var ImageClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
   /**
    * @param {string} [assetsBaseURL] - ライブラリ・モデルの読み込み元 (末尾 / 付き)
    */
   function ImageClassifier() {
+    var _this;
     var assetsBaseURL = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_ASSETS_BASE_URL;
     _classCallCheck(this, ImageClassifier);
-    /**
-     * ライブラリ・モデルの読み込み元
-     * @type {string}
-     */
-    this.assetsBaseURL = assetsBaseURL;
-
-    /**
-     * ライブラリとモデルのロード処理。一度だけ実行する。
-     * @type {?Promise}
-     */
-    this.loading = null;
+    _this = _callSuper$1(this, ImageClassifier, [MODEL_ID$1, assetsBaseURL]);
 
     /**
      * MobileNet モデル (特徴抽出器)
      */
-    this.mobileNet = null;
-
-    /**
-     * KNN 分類器
-     */
-    this.knn = null;
+    _this.mobileNet = null;
+    return _this;
   }
 
   /**
    * TensorFlow.js / MobileNet / KNN 分類器をロードする。
    * @returns {Promise} 準備完了で resolve する Promise
    */
+  _inherits(ImageClassifier, _KnnClassifierBase);
   return _createClass(ImageClassifier, [{
-    key: "load",
-    value: function load() {
-      var _this = this;
-      if (!this.loading) {
-        this.loading = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee() {
-          var base;
-          return regenerator.wrap(function (_context) {
-            while (1) switch (_context.prev = _context.next) {
-              case 0:
-                base = _this.assetsBaseURL;
-                if (window.tf) {
-                  _context.next = 1;
-                  break;
-                }
-                _context.next = 1;
-                return loadScript(base + TFJS_PATH);
-              case 1:
-                if (window.knnClassifier) {
-                  _context.next = 2;
-                  break;
-                }
+    key: "loadModel",
+    value: (function () {
+      var _loadModel = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee() {
+        var base;
+        return regenerator.wrap(function (_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              base = this.assetsBaseURL;
+              _context.next = 1;
+              return loadTensorFlow(base);
+            case 1:
+              if (window.mobilenet) {
                 _context.next = 2;
-                return loadScript(base + KNN_CLASSIFIER_PATH);
-              case 2:
-                if (window.mobilenet) {
-                  _context.next = 3;
-                  break;
-                }
-                _context.next = 3;
-                return loadScript(base + MOBILENET_PATH);
-              case 3:
-                _context.next = 4;
-                return window.mobilenet.load({
-                  version: 2,
-                  alpha: 0.5,
-                  modelUrl: base + MOBILENET_MODEL_PATH
-                });
-              case 4:
-                _this.mobileNet = _context.sent;
-                _this.knn = window.knnClassifier.create();
-              case 5:
-              case "end":
-                return _context.stop();
-            }
-          }, _callee);
-        }))().catch(function (error) {
-          // 失敗したら次回の呼び出しでリトライできるようにする
-          _this.loading = null;
-          throw error;
-        });
+                break;
+              }
+              _context.next = 2;
+              return loadScript(base + MOBILENET_PATH);
+            case 2:
+              _context.next = 3;
+              return window.mobilenet.load({
+                version: 2,
+                alpha: 0.5,
+                modelUrl: base + MOBILENET_MODEL_PATH
+              });
+            case 3:
+              this.mobileNet = _context.sent;
+              this.knn = window.knnClassifier.create();
+            case 4:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, this);
+      }));
+      function loadModel() {
+        return _loadModel.apply(this, arguments);
       }
-      return this.loading;
-    }
-
-    /**
-     * ライブラリとモデルのロードが完了しているかどうか。
-     * @returns {boolean} 準備完了なら true
-     */
-  }, {
-    key: "isReady",
-    value: function isReady() {
-      return !!this.mobileNet && !!this.knn;
-    }
-
-    /**
-     * 学習済みの例があるかどうか。
-     * @returns {boolean} 1 つ以上のラベルが学習済みなら true
-     */
-  }, {
-    key: "hasExamples",
-    value: function hasExamples() {
-      return !!this.knn && this.knn.getNumClasses() > 0;
-    }
-
+      return loadModel;
+    }()
     /**
      * 現在の画像を指定ラベルの例として学習する。
      * @param {HTMLVideoElement|HTMLCanvasElement} input - 入力画像
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
+    )
   }, {
     key: "train",
     value: (function () {
@@ -884,95 +1132,578 @@ var ImageClassifier = /*#__PURE__*/function () {
         return _classify.apply(this, arguments);
       }
       return classify;
+    }())
+  }]);
+}(KnnClassifierBase);
+
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+var SPEECH_MODEL_PATH = 'models/speech_commands_18w/model.json';
+
+/**
+ * 特徴抽出に使うモデルの識別子
+ * @type {string}
+ */
+var MODEL_ID = 'speech_commands_18w';
+
+/**
+ * モデルが前提とするサンプリングレート [Hz]
+ * @type {number}
+ */
+var SAMPLE_RATE = 44100;
+
+/**
+ * 1 フレームの FFT サイズ (AnalyserNode の fftSize はこの 2 倍)
+ * @type {number}
+ */
+var FFT_SIZE = 1024;
+
+/**
+ * 1 回の分類に使うフレーム数 (43 × 1024 / 44100 ≒ 1 秒)。モデルの入力サイズで固定。
+ * @type {number}
+ */
+var NUM_FRAMES = 43;
+
+/**
+ * 1 回の学習で録音するフレーム数 (86 フレーム ≒ 2 秒)。
+ * モデルの入力は NUM_FRAMES 固定なので、録音を TRAIN_WINDOW_HOP ずつずらした
+ * NUM_FRAMES の窓に切り出し、窓ごとに例として学習する (2 秒なら 3 窓)。
+ * @type {number}
+ */
+var TRAIN_FRAMES = NUM_FRAMES * 2;
+
+/**
+ * 学習時に録音を窓に切り出すときのずらし幅 (フレーム数、約 0.5 秒)
+ * @type {number}
+ */
+var TRAIN_WINDOW_HOP = Math.floor(NUM_FRAMES / 2);
+
+/**
+ * 保持しておく直近フレームの最大数
+ * @type {number}
+ */
+var MAX_FRAMES = TRAIN_FRAMES;
+
+/**
+ * 1 フレームのうちモデルに渡す周波数ビン数 (低い方から)
+ * @type {number}
+ */
+var FRAME_SIZE = 232;
+
+/**
+ * 録音待ちタイムアウトの余裕 (録音時間にこれを足した時間でタイムアウトする)
+ * @type {number} [milliseconds]
+ */
+var CAPTURE_TIMEOUT_MARGIN = 3000;
+
+/**
+ * 正規化時のゼロ除算防止用 (TensorFlow.js の float32 epsilon と同じ)
+ * @type {number}
+ */
+var EPSILON = 1e-7;
+var AudioClassifier = /*#__PURE__*/function (_KnnClassifierBase) {
+  /**
+   * @param {string} [assetsBaseURL] - ライブラリ・モデルの読み込み元 (末尾 / 付き)
+   */
+  function AudioClassifier() {
+    var _this;
+    var assetsBaseURL = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_ASSETS_BASE_URL;
+    _classCallCheck(this, AudioClassifier);
+    _this = _callSuper(this, AudioClassifier, [MODEL_ID, assetsBaseURL]);
+
+    /**
+     * 特徴抽出モデル (speech-commands モデルを隠れ Dense 層で切ったもの)
+     */
+    _this.embeddingModel = null;
+
+    /**
+     * マイク入力のストリーム
+     * @type {?MediaStream}
+     */
+    _this.stream = null;
+
+    /**
+     * マイク処理用の AudioContext
+     * @type {?AudioContext}
+     */
+    _this.audioContext = null;
+
+    /**
+     * スペクトログラム取得用の AnalyserNode
+     * @type {?AnalyserNode}
+     */
+    _this.analyser = null;
+
+    /**
+     * フレーム取り込みを駆動する ScriptProcessorNode。マイク起動中は非 null。
+     * @type {?ScriptProcessorNode}
+     */
+    _this.processor = null;
+
+    /**
+     * ScriptProcessorNode が使えない環境でのフレーム取得タイマー
+     * @type {?number}
+     */
+    _this.frameTimer = null;
+
+    /**
+     * 実行中のマイク起動処理
+     * @type {?Promise}
+     */
+    _this.microphoneStarting = null;
+
+    /**
+     * AnalyserNode から周波数データを受け取るバッファ
+     * @type {?Float32Array}
+     */
+    _this.freqData = null;
+
+    /**
+     * 直近のフレーム (古い順、最大 MAX_FRAMES 個)
+     * @type {Array<Float32Array>}
+     */
+    _this.frames = [];
+
+    /**
+     * マイク起動後に取得したフレームの総数
+     * @type {number}
+     */
+    _this.frameCount = 0;
+
+    /**
+     * 録音完了を待っている処理
+     * @type {Array<{start: number, numFrames: number, onProgress: ?Function, resolve: Function, reject: Function}>}
+     */
+    _this.captureWaiters = [];
+    return _this;
+  }
+
+  /**
+   * TensorFlow.js / speech-commands モデル / KNN 分類器をロードする。
+   * @returns {Promise} 準備完了で resolve する Promise
+   */
+  _inherits(AudioClassifier, _KnnClassifierBase);
+  return _createClass(AudioClassifier, [{
+    key: "loadModel",
+    value: (function () {
+      var _loadModel = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee() {
+        var _this2 = this;
+        var tf, baseModel, layers, index;
+        return regenerator.wrap(function (_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              _context.next = 1;
+              return loadTensorFlow(this.assetsBaseURL);
+            case 1:
+              tf = window.tf; // 重みファイルは TensorFlow.js が model.json と同じ場所から読む
+              _context.next = 2;
+              return tf.loadLayersModel(this.assetsBaseURL + SPEECH_MODEL_PATH);
+            case 2:
+              baseModel = _context.sent;
+              // 最後から 2 番目の Dense 層の出力を特徴量にする (speech-commands の転移学習と同じ切り出し方)
+              layers = baseModel.layers;
+              index = layers.length - 2;
+              while (index >= 0 && layers[index].getClassName().toLowerCase() !== 'dense') {
+                index--;
+              }
+              if (!(index < 0)) {
+                _context.next = 3;
+                break;
+              }
+              throw new Error('hidden dense layer is not found in the speech model');
+            case 3:
+              this.embeddingModel = tf.model({
+                inputs: baseModel.inputs,
+                outputs: layers[index].output
+              });
+              // 初回推論は遅い (シェーダーコンパイルなど) ので、ここで一度走らせておく
+              tf.tidy(function () {
+                return _this2.embeddingModel.predict(tf.zeros([1, NUM_FRAMES, FRAME_SIZE, 1]));
+              });
+              this.knn = window.knnClassifier.create();
+            case 4:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, this);
+      }));
+      function loadModel() {
+        return _loadModel.apply(this, arguments);
+      }
+      return loadModel;
     }()
     /**
-     * 学習した例をすべて消去する。保持していたテンソルも解放される。
+     * マイクが起動しているかどうか。
+     * @returns {boolean} 起動中なら true
      */
     )
   }, {
-    key: "reset",
-    value: function reset() {
-      if (this.knn) {
-        this.knn.clearAllClasses();
+    key: "isListening",
+    value: function isListening() {
+      return this.processor !== null || this.frameTimer !== null;
+    }
+
+    /**
+     * マイクを起動してスペクトログラムの更新を始める (起動済みなら何もしない)。
+     * @returns {Promise} 起動完了で resolve する Promise
+     */
+  }, {
+    key: "startMicrophone",
+    value: function startMicrophone() {
+      var _this3 = this;
+      if (this.isListening()) return Promise.resolve();
+      if (!this.microphoneStarting) {
+        this.microphoneStarting = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee2() {
+          var stream, AudioContextClass, context, analyser, processor, _t;
+          return regenerator.wrap(function (_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.next = 1;
+                return navigator.mediaDevices.getUserMedia({
+                  audio: true,
+                  video: false
+                });
+              case 1:
+                stream = _context2.sent;
+                _context2.prev = 2;
+                AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                try {
+                  context = new AudioContextClass({
+                    sampleRate: SAMPLE_RATE
+                  });
+                } catch (error) {
+                  // sampleRate 指定に対応していないブラウザ
+                  context = new AudioContextClass();
+                }
+                if (context.sampleRate !== SAMPLE_RATE) {
+                  console.warn("audio sample rate is ".concat(context.sampleRate, " Hz (expected ").concat(SAMPLE_RATE, " Hz)"));
+                }
+                if (context.state === 'suspended') {
+                  // ユーザー操作 (ブロックのクリック) の後なので再開できるはず
+                  context.resume().catch(function (error) {
+                    return console.warn(error);
+                  });
+                }
+                analyser = context.createAnalyser();
+                analyser.fftSize = FFT_SIZE * 2;
+                analyser.smoothingTimeConstant = 0;
+                context.createMediaStreamSource(stream).connect(analyser);
+                _this3.stream = stream;
+                _this3.audioContext = context;
+                _this3.analyser = analyser;
+                _this3.freqData = new Float32Array(analyser.frequencyBinCount);
+                _this3.frames = [];
+                _this3.frameCount = 0;
+                if (typeof context.createScriptProcessor === 'function') {
+                  // FFT_SIZE サンプルごと (約 23ms) に呼ばれる。出力は書かないので無音。
+                  processor = context.createScriptProcessor(FFT_SIZE, 1, 1);
+                  processor.onaudioprocess = function () {
+                    return _this3.onAudioFrame();
+                  };
+                  analyser.connect(processor);
+                  processor.connect(context.destination);
+                  _this3.processor = processor;
+                } else {
+                  _this3.frameTimer = setInterval(function () {
+                    return _this3.onAudioFrame();
+                  }, FFT_SIZE / context.sampleRate * 1000);
+                }
+                _context2.next = 4;
+                break;
+              case 3:
+                _context2.prev = 3;
+                _t = _context2["catch"](2);
+                stream.getTracks().forEach(function (track) {
+                  return track.stop();
+                });
+                throw _t;
+              case 4:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2, null, [[2, 3]]);
+        }))().finally(function () {
+          _this3.microphoneStarting = null;
+        });
+      }
+      return this.microphoneStarting;
+    }
+
+    /**
+     * マイクを停止して、保持しているフレームを捨てる。
+     */
+  }, {
+    key: "stopMicrophone",
+    value: function stopMicrophone() {
+      if (this.processor) {
+        this.processor.onaudioprocess = null;
+        this.processor.disconnect();
+        this.processor = null;
+      }
+      if (this.frameTimer !== null) {
+        clearInterval(this.frameTimer);
+        this.frameTimer = null;
+      }
+      var waiters = this.captureWaiters;
+      this.captureWaiters = [];
+      waiters.forEach(function (waiter) {
+        return waiter.reject(new Error('microphone is stopped'));
+      });
+      if (this.stream) {
+        this.stream.getTracks().forEach(function (track) {
+          return track.stop();
+        });
+        this.stream = null;
+      }
+      if (this.audioContext) {
+        this.audioContext.close().catch(function () {});
+        this.audioContext = null;
+      }
+      this.analyser = null;
+      this.freqData = null;
+      this.frames = [];
+      this.frameCount = 0;
+    }
+
+    /**
+     * 1 フレーム分の周波数データを取り込む。
+     */
+  }, {
+    key: "onAudioFrame",
+    value: function onAudioFrame() {
+      var _this4 = this;
+      if (!this.analyser) return;
+      this.analyser.getFloatFrequencyData(this.freqData);
+      if (this.freqData[0] === -Infinity) {
+        // 入力がまだ無い (完全な無音) フレームは捨てる
+        return;
+      }
+      this.frames.push(this.freqData.slice(0, FRAME_SIZE));
+      if (this.frames.length > MAX_FRAMES) {
+        this.frames.shift();
+      }
+      this.frameCount++;
+      if (this.captureWaiters.length > 0) {
+        var done = [];
+        var _iterator = _createForOfIteratorHelper(this.captureWaiters),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var waiter = _step.value;
+            var captured = this.frameCount - waiter.start;
+            if (waiter.onProgress) {
+              waiter.onProgress(Math.min(1, captured / waiter.numFrames));
+            }
+            if (captured >= waiter.numFrames) {
+              done.push(waiter);
+            }
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+        if (done.length > 0) {
+          this.captureWaiters = this.captureWaiters.filter(function (waiter) {
+            return !done.includes(waiter);
+          });
+          done.forEach(function (waiter) {
+            return waiter.resolve(_this4.frames.slice(-waiter.numFrames));
+          });
+        }
       }
     }
 
     /**
-     * 学習データを JSON 文字列にシリアライズする。
-     * @returns {string} 学習データの JSON 文字列
+     * これから指定フレーム数分を録音する。
+     * @param {number} numFrames - 録音するフレーム数
+     * @param {?Function} onProgress - 進み具合 (0〜1) を受け取るコールバック
+     * @returns {Promise<Array<Float32Array>>} 録音したフレームで resolve する Promise
      */
   }, {
-    key: "serialize",
-    value: function serialize() {
-      var labels = {};
-      if (this.knn) {
-        var dataset = this.knn.getClassifierDataset();
-        for (var _i = 0, _Object$keys = Object.keys(dataset); _i < _Object$keys.length; _i++) {
-          var label = _Object$keys[_i];
-          var examples = dataset[label];
-          labels[label] = {
-            shape: examples.shape,
-            data: Array.from(examples.dataSync())
-          };
-        }
-      }
-      return JSON.stringify({
-        format: DATA_FORMAT,
-        version: 1,
-        model: MODEL_ID,
-        labels: labels
+    key: "captureNext",
+    value: function captureNext(numFrames, onProgress) {
+      var _this5 = this;
+      return new Promise(function (resolve, reject) {
+        var waiter = {
+          start: _this5.frameCount,
+          numFrames: numFrames,
+          onProgress: onProgress,
+          resolve: resolve,
+          reject: reject
+        };
+        _this5.captureWaiters.push(waiter);
+        var sampleRate = _this5.audioContext ? _this5.audioContext.sampleRate : SAMPLE_RATE;
+        var timeout = numFrames * FFT_SIZE / sampleRate * 1000 + CAPTURE_TIMEOUT_MARGIN;
+        setTimeout(function () {
+          if (_this5.captureWaiters.includes(waiter)) {
+            _this5.captureWaiters = _this5.captureWaiters.filter(function (w) {
+              return w !== waiter;
+            });
+            reject(new Error('timeout to capture audio'));
+          }
+        }, timeout);
       });
     }
 
     /**
-     * シリアライズされた学習データを復元する。今の学習内容は破棄される。
-     * @param {object} parsed - JSON.parse 済みの学習データ
-     * @returns {Promise} 復元完了で resolve する Promise
+     * 1 回の学習で録音する時間。
+     * @returns {number} 録音時間 [milliseconds]
      */
   }, {
-    key: "restore",
+    key: "trainDuration",
+    get: function get() {
+      var sampleRate = this.audioContext ? this.audioContext.sampleRate : SAMPLE_RATE;
+      return TRAIN_FRAMES * FFT_SIZE / sampleRate * 1000;
+    }
+
+    /**
+     * フレーム列から特徴量を計算する。
+     * @param {Array<Float32Array>} frames - NUM_FRAMES 個のフレーム
+     * @returns {Tensor} 特徴量テンソル (呼び出し側で dispose すること)
+     */
+  }, {
+    key: "embed",
+    value: function embed(frames) {
+      var _this6 = this;
+      var tf = window.tf;
+      return tf.tidy(function () {
+        var data = new Float32Array(NUM_FRAMES * FRAME_SIZE);
+        frames.forEach(function (frame, i) {
+          return data.set(frame, i * FRAME_SIZE);
+        });
+        var x = tf.tensor4d(data, [1, NUM_FRAMES, FRAME_SIZE, 1]);
+        // speech-commands と同じく全体の平均 0・分散 1 に正規化する
+        var _tf$moments = tf.moments(x),
+          mean = _tf$moments.mean,
+          variance = _tf$moments.variance;
+        var normalized = x.sub(mean).div(variance.sqrt().add(EPSILON));
+        return _this6.embeddingModel.predict(normalized);
+      });
+    }
+
+    /**
+     * モデルのロードとマイクの起動を済ませる (学習前の準備)。
+     * @returns {Promise} 準備完了で resolve する Promise
+     */
+  }, {
+    key: "prepare",
     value: (function () {
-      var _restore = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4(parsed) {
-        var dataset, _i2, _Object$keys2, label, examples;
+      var _prepare = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee3() {
+        return regenerator.wrap(function (_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              _context3.next = 1;
+              return this.load();
+            case 1:
+              _context3.next = 2;
+              return this.startMicrophone();
+            case 2:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3, this);
+      }));
+      function prepare() {
+        return _prepare.apply(this, arguments);
+      }
+      return prepare;
+    }()
+    /**
+     * これから約 2 秒間の音を指定ラベルの例として学習する。
+     * 録音を約 0.5 秒ずつずらした約 1 秒の窓に切り出し、窓ごとに例として追加する。
+     * @param {string} label - ラベル
+     * @param {?Function} onProgress - 録音の進み具合 (0〜1) を受け取るコールバック
+     * @returns {Promise} 学習完了で resolve する Promise
+     */
+    )
+  }, {
+    key: "train",
+    value: (function () {
+      var _train = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4(label, onProgress) {
+        var frames, offset, features;
         return regenerator.wrap(function (_context4) {
           while (1) switch (_context4.prev = _context4.next) {
             case 0:
-              if (!(!parsed || parsed.format !== DATA_FORMAT || !parsed.labels)) {
-                _context4.next = 1;
-                break;
-              }
-              throw new Error('invalid learning data format');
+              _context4.next = 1;
+              return this.prepare();
             case 1:
-              if (!(parsed.model !== MODEL_ID)) {
-                _context4.next = 2;
-                break;
-              }
-              throw new Error("incompatible model: ".concat(parsed.model));
+              _context4.next = 2;
+              return this.captureNext(TRAIN_FRAMES, onProgress);
             case 2:
-              _context4.next = 3;
-              return this.load();
-            case 3:
-              dataset = {};
-              for (_i2 = 0, _Object$keys2 = Object.keys(parsed.labels); _i2 < _Object$keys2.length; _i2++) {
-                label = _Object$keys2[_i2];
-                examples = parsed.labels[label];
-                dataset[label] = window.tf.tensor2d(examples.data, examples.shape);
+              frames = _context4.sent;
+              for (offset = 0; offset + NUM_FRAMES <= frames.length; offset += TRAIN_WINDOW_HOP) {
+                features = this.embed(frames.slice(offset, offset + NUM_FRAMES)); // addExample は内部でコピーを保持するので、渡したテンソルはすぐ破棄してよい
+                this.knn.addExample(features, label);
+                features.dispose();
               }
-              this.knn.clearAllClasses();
-              this.knn.setClassifierDataset(dataset);
-            case 4:
+            case 3:
             case "end":
               return _context4.stop();
           }
         }, _callee4, this);
       }));
-      function restore(_x4) {
-        return _restore.apply(this, arguments);
+      function train(_x, _x2) {
+        return _train.apply(this, arguments);
       }
-      return restore;
+      return train;
+    }()
+    /**
+     * 直近約 1 秒間の音を分類してラベルを返す。
+     * マイク起動直後でまだ 1 秒分のフレームが無いときは空文字列を返す。
+     * @returns {Promise<string>} 分類されたラベル (未学習なら空文字列)
+     */
+    )
+  }, {
+    key: "classify",
+    value: (function () {
+      var _classify = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee5() {
+        var features, result;
+        return regenerator.wrap(function (_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
+            case 0:
+              if (this.hasExamples()) {
+                _context5.next = 1;
+                break;
+              }
+              return _context5.abrupt("return", '');
+            case 1:
+              _context5.next = 2;
+              return this.startMicrophone();
+            case 2:
+              if (!(this.frames.length < NUM_FRAMES)) {
+                _context5.next = 3;
+                break;
+              }
+              return _context5.abrupt("return", '');
+            case 3:
+              features = this.embed(this.frames.slice(-NUM_FRAMES));
+              _context5.prev = 4;
+              _context5.next = 5;
+              return this.knn.predictClass(features, KNN_K);
+            case 5:
+              result = _context5.sent;
+              return _context5.abrupt("return", result.label);
+            case 6:
+              _context5.prev = 6;
+              features.dispose();
+              return _context5.finish(6);
+            case 7:
+            case "end":
+              return _context5.stop();
+          }
+        }, _callee5, this, [[4,, 6, 7]]);
+      }));
+      function classify() {
+        return _classify.apply(this, arguments);
+      }
+      return classify;
     }())
   }]);
-}();
+}(KnnClassifierBase);
 
 /**
  * Formatter which is used for translation.
@@ -1003,16 +1734,48 @@ var EXTENSION_ID = 'xcxml';
 var extensionURL = 'https://asondemita.github.io/xcx-ml/dist/xcx-ml.mjs';
 
 /**
+ * 学習データファイルのフォーマット識別子
+ * @type {string}
+ */
+var DATA_FORMAT = 'xcx-g2s-knn';
+
+/**
+ * 学習データファイルのバージョン。
+ * 1: 画像の学習データのみ (model, labels)
+ * 2: 1 に音声の学習データ (audio: {model, labels}) を追加。1 の読み手でも画像部分は読める。
+ * @type {number}
+ */
+var DATA_VERSION = 2;
+
+/**
  * 初回セットアップ通知ダイアログの最低表示時間。
  * @type {number} [milliseconds]
  */
 var SETUP_NOTICE_MIN_DURATION = 3000;
 
 /**
- * セットアップ失敗メッセージの表示時間。
+ * 失敗メッセージの表示時間。
  * @type {number} [milliseconds]
  */
-var SETUP_NOTICE_ERROR_DURATION = 5000;
+var NOTICE_ERROR_DURATION = 5000;
+
+/**
+ * 録音終了メッセージの表示時間。
+ * @type {number} [milliseconds]
+ */
+var NOTICE_DONE_DURATION = 2000;
+
+/**
+ * 学習・分類の入力元。
+ * @readonly
+ * @enum {string}
+ */
+var InputMode = {
+  /** カメラ画像 */
+  CAMERA: 'camera',
+  /** マイクの音 */
+  MICROPHONE: 'microphone'
+};
 
 /**
  * States the video sensing activity can be set to.
@@ -1029,7 +1792,7 @@ var VideoState = {
 };
 
 /**
- * Scratch 3.0 blocks for machine learning (KNN image classification).
+ * Scratch 3.0 blocks for machine learning (KNN image / sound classification).
  */
 var ExtensionBlocks = /*#__PURE__*/function () {
   /**
@@ -1053,6 +1816,18 @@ var ExtensionBlocks = /*#__PURE__*/function () {
      * @type {?ImageClassifier}
      */
     this.imageClassifier = null;
+
+    /**
+     * 音声分類器 (speech-commands + KNN)。マイクモードで最初に使われたときに生成する。
+     * @type {?AudioClassifier}
+     */
+    this.audioClassifier = null;
+
+    /**
+     * 学習・分類の入力元。既存プロジェクトとの互換性のため初期値はカメラ。
+     * @type {InputMode}
+     */
+    this.inputMode = InputMode.CAMERA;
 
     /**
      * 実行中の分類処理。モニターなどからの連続呼び出しを 1 つにまとめる。
@@ -1091,10 +1866,17 @@ var ExtensionBlocks = /*#__PURE__*/function () {
     this.errorDialogOpened = false;
 
     /**
-     * 表示中のセットアップ通知ダイアログ。
-     * @type {?{dialog: HTMLDialogElement, label: Text, openedAt: number}}
+     * 表示中の通知ダイアログ (セットアップ中・録音中など)。
+     * @type {?{dialog: HTMLDialogElement, label: HTMLElement, gauge: HTMLElement, gaugeFill: HTMLElement,
+     *   openedAt: number, minDuration: number}}
      */
-    this.setupNotice = null;
+    this.notice = null;
+
+    /**
+     * 閉じる予定で表示中の通知ダイアログ (closeNotice 後の待ち時間中)。
+     * @type {?{dialog: HTMLDialogElement, timer: number}}
+     */
+    this.closingNotice = null;
   }
 
   /**
@@ -1109,6 +1891,40 @@ var ExtensionBlocks = /*#__PURE__*/function () {
         this.imageClassifier = new ImageClassifier(assetsBaseURLFrom(ExtensionBlocks.extensionURL));
       }
       return this.imageClassifier;
+    }
+
+    /**
+     * 音声分類器を返す。まだ無ければ生成する。
+     * ライブラリ・モデルは、この拡張機能本体が読み込まれた URL と同じ場所から読む。
+     * @returns {AudioClassifier} 音声分類器
+     */
+  }, {
+    key: "getAudioClassifier",
+    value: function getAudioClassifier() {
+      if (!this.audioClassifier) {
+        this.audioClassifier = new AudioClassifier(assetsBaseURLFrom(ExtensionBlocks.extensionURL));
+      }
+      return this.audioClassifier;
+    }
+
+    /**
+     * 今の入力モードに対応する分類器を返す (未生成なら null)。
+     * @returns {?ImageClassifier|AudioClassifier} 分類器
+     */
+  }, {
+    key: "getCurrentClassifier",
+    value: function getCurrentClassifier() {
+      return this.inputMode === InputMode.MICROPHONE ? this.audioClassifier : this.imageClassifier;
+    }
+
+    /**
+     * 分類結果のキャッシュを捨てる。
+     */
+  }, {
+    key: "clearLabelCache",
+    value: function clearLabelCache() {
+      this.mlLastLabel = '';
+      this.mlLabelUpdatedTime = 0;
     }
 
     /**
@@ -1168,100 +1984,211 @@ var ExtensionBlocks = /*#__PURE__*/function () {
       return getVideoInput;
     }()
     /**
-     * 初回セットアップ中であることを知らせるダイアログを表示する。
-     * 閉じるのは closeSetupNotice()。すでに表示中なら何もしない。
+     * 処理中であることを知らせる非モーダルのダイアログを表示する。
+     * 閉じるのは closeNotice()。すでに表示中なら文言だけ差し替える。
+     * @param {string} message - 表示する文言
+     * @param {number} minDuration - 最低表示時間 [milliseconds]
      */
     )
   }, {
-    key: "openSetupNotice",
-    value: function openSetupNotice() {
-      if (this.setupNotice) return;
+    key: "openNotice",
+    value: function openNotice(message, minDuration) {
+      if (this.notice) {
+        this.updateNotice(message, minDuration);
+        return;
+      }
+      if (this.closingNotice) {
+        // 前のダイアログが閉じ待ちなら、重ならないようにすぐ閉じる
+        clearTimeout(this.closingNotice.timer);
+        this.removeNoticeDialog(this.closingNotice.dialog);
+        this.closingNotice = null;
+      }
       var dialog = document.createElement('dialog');
       dialog.style.padding = '16px';
       // Scratch GUI の UI より手前に、操作を妨げない非モーダルで出す
       dialog.style.position = 'fixed';
       dialog.style.top = '40%';
       dialog.style.zIndex = '1000';
-      var label = document.createTextNode(formatMessage({
-        id: 'xcxml.setupNotice.message',
-        default: 'Preparing the machine learning environment. This may take a while...',
-        description: 'notice that the first setup takes a while'
-      }));
+      var label = document.createElement('div');
+      label.textContent = message;
       dialog.appendChild(label);
+      // 録音の残り時間を示すゲージ (グレーの帯が左から赤く埋まる)。使うときだけ表示する。
+      var gauge = document.createElement('div');
+      gauge.style.display = 'none';
+      gauge.style.marginTop = '8px';
+      gauge.style.height = '10px';
+      gauge.style.minWidth = '240px';
+      gauge.style.background = '#cccccc';
+      gauge.style.borderRadius = '5px';
+      gauge.style.overflow = 'hidden';
+      var gaugeFill = document.createElement('div');
+      gaugeFill.style.width = '0%';
+      gaugeFill.style.height = '100%';
+      gaugeFill.style.background = '#e53935';
+      gaugeFill.style.transition = 'width 60ms linear';
+      gauge.appendChild(gaugeFill);
+      dialog.appendChild(gauge);
       document.body.appendChild(dialog);
       dialog.show();
-      this.setupNotice = {
+      this.notice = {
         dialog: dialog,
         label: label,
-        openedAt: Date.now()
+        gauge: gauge,
+        gaugeFill: gaugeFill,
+        openedAt: Date.now(),
+        minDuration: minDuration
       };
     }
 
     /**
-     * セットアップ通知ダイアログを閉じる。
-     * 成功時は最低表示時間の残りを待ってから閉じる。
-     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
-     * @param {?Error} error - セットアップに失敗したときのエラー
+     * 通知ダイアログのゲージを表示して進み具合を反映する。
+     * @param {number} ratio - 進み具合 (0〜1)
      */
   }, {
-    key: "closeSetupNotice",
-    value: function closeSetupNotice(error) {
-      var notice = this.setupNotice;
+    key: "setNoticeProgress",
+    value: function setNoticeProgress(ratio) {
+      var notice = this.notice;
       if (!notice) return;
-      this.setupNotice = null;
-      var delay = SETUP_NOTICE_MIN_DURATION - (Date.now() - notice.openedAt);
-      if (error) {
-        notice.label.textContent = formatMessage({
-          id: 'xcxml.setupNotice.failed',
-          default: 'Setup failed. Check the network connection and the camera, then click the block again.',
-          description: 'message when the first setup failed'
-        });
-        delay = SETUP_NOTICE_ERROR_DURATION;
-      }
-      setTimeout(function () {
-        notice.dialog.close();
-        document.body.removeChild(notice.dialog);
-      }, Math.max(0, delay));
+      notice.gauge.style.display = 'block';
+      notice.gaugeFill.style.width = "".concat(Math.round(Math.max(0, Math.min(1, ratio)) * 100), "%");
     }
 
     /**
-     * 現在のカメラ画像を指定ラベルの例として学習する。
-     * 初回はライブラリ・モデルのロードとカメラ起動が走るため、通知ダイアログを表示する。
+     * 通知ダイアログを DOM から取り除く。
+     * @param {HTMLDialogElement} dialog - ダイアログ
+     */
+  }, {
+    key: "removeNoticeDialog",
+    value: function removeNoticeDialog(dialog) {
+      if (dialog.open) dialog.close();
+      if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
+    }
+
+    /**
+     * 表示中の通知ダイアログの文言を差し替え、最低表示時間を数え直す。
+     * @param {string} message - 表示する文言
+     * @param {number} minDuration - 最低表示時間 [milliseconds]
+     */
+  }, {
+    key: "updateNotice",
+    value: function updateNotice(message, minDuration) {
+      var notice = this.notice;
+      if (!notice) return;
+      notice.label.textContent = message;
+      notice.openedAt = Date.now();
+      notice.minDuration = minDuration;
+    }
+
+    /**
+     * 通知ダイアログを閉じる。
+     * 成功時は最低表示時間の残りを待ってから閉じる。
+     * 失敗時はメッセージを差し替えてしばらく見せてから閉じる。
+     * @param {?string} errorMessage - 失敗したときに表示する文言
+     */
+  }, {
+    key: "closeNotice",
+    value: function closeNotice(errorMessage) {
+      var _this = this;
+      var notice = this.notice;
+      if (!notice) return;
+      this.notice = null;
+      var delay = notice.minDuration - (Date.now() - notice.openedAt);
+      if (errorMessage) {
+        notice.label.textContent = errorMessage;
+        notice.gauge.style.display = 'none';
+        delay = NOTICE_ERROR_DURATION;
+      }
+      var closing = {
+        dialog: notice.dialog,
+        timer: 0
+      };
+      closing.timer = setTimeout(function () {
+        if (_this.closingNotice === closing) _this.closingNotice = null;
+        _this.removeNoticeDialog(notice.dialog);
+      }, Math.max(0, delay));
+      this.closingNotice = closing;
+    }
+
+    /**
+     * @returns {string} 初回セットアップ中の文言
+     */
+  }, {
+    key: "setupNoticeMessage",
+    get: function get() {
+      return formatMessage({
+        id: 'xcxml.setupNotice.message',
+        default: 'Preparing the machine learning environment. This may take a while...',
+        description: 'notice that the first setup takes a while'
+      });
+    }
+
+    /**
+     * 今の入力モードを指定ラベルの例として学習する。
      * @param {string} label - ラベル
      * @returns {Promise} 学習完了で resolve する Promise
      */
   }, {
     key: "mlTrain",
+    value: function mlTrain(label) {
+      if (this.inputMode === InputMode.MICROPHONE) {
+        return this.mlTrainAudio(label);
+      }
+      return this.mlTrainImage(label);
+    }
+
+    /**
+     * これから約 2 秒間のマイクの音を指定ラベルの例として学習する。
+     * 録音中はダイアログに残り時間のゲージを出し、終わると「終了」に変えて 2 秒後に閉じる。
+     * 初回はライブラリ・モデルのロードとマイク起動が先に走る。
+     * @param {string} label - ラベル
+     * @returns {Promise} 学習完了で resolve する Promise
+     */
+  }, {
+    key: "mlTrainAudio",
     value: (function () {
-      var _mlTrain = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee2(label) {
-        var classifier, firstSetup, input, _t;
+      var _mlTrainAudio = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee2(label) {
+        var _this2 = this;
+        var classifier, firstSetup, _t;
         return regenerator.wrap(function (_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              classifier = this.getImageClassifier();
+              classifier = this.getAudioClassifier();
               firstSetup = !classifier.isReady();
               if (firstSetup) {
-                this.openSetupNotice();
+                this.openNotice(this.setupNoticeMessage, SETUP_NOTICE_MIN_DURATION);
               }
               _context2.prev = 1;
               _context2.next = 2;
-              return this.getVideoInput();
+              return classifier.prepare();
             case 2:
-              input = _context2.sent;
+              this.openNotice(formatMessage({
+                id: 'xcxml.listeningNotice.message',
+                default: 'Listening to the microphone...',
+                description: 'notice that the sound for training is being recorded'
+              }), 0);
+              this.setNoticeProgress(0);
               _context2.next = 3;
-              return classifier.train(input, label);
+              return classifier.train(label, function (ratio) {
+                return _this2.setNoticeProgress(ratio);
+              });
             case 3:
-              if (firstSetup) {
-                this.closeSetupNotice();
-              }
+              this.setNoticeProgress(1);
+              this.updateNotice(formatMessage({
+                id: 'xcxml.listeningNotice.done',
+                default: 'Done',
+                description: 'notice that the recording for training has finished'
+              }), NOTICE_DONE_DURATION);
+              this.closeNotice();
               _context2.next = 5;
               break;
             case 4:
               _context2.prev = 4;
               _t = _context2["catch"](1);
-              if (firstSetup) {
-                this.closeSetupNotice(_t);
-              }
+              this.closeNotice(formatMessage({
+                id: 'xcxml.setupNotice.failedMicrophone',
+                default: 'Setup failed. Check the network connection and the microphone, then click the block again.',
+                description: 'message when the first setup with microphone failed'
+              }));
               console.error(_t);
             case 5:
             case "end":
@@ -1269,10 +2196,65 @@ var ExtensionBlocks = /*#__PURE__*/function () {
           }
         }, _callee2, this, [[1, 4]]);
       }));
-      function mlTrain(_x) {
-        return _mlTrain.apply(this, arguments);
+      function mlTrainAudio(_x) {
+        return _mlTrainAudio.apply(this, arguments);
       }
-      return mlTrain;
+      return mlTrainAudio;
+    }()
+    /**
+     * 現在のカメラ画像を指定ラベルの例として学習する。
+     * 初回はライブラリ・モデルのロードとカメラ起動が走るため、通知ダイアログを表示する。
+     * @param {string} label - ラベル
+     * @returns {Promise} 学習完了で resolve する Promise
+     */
+    )
+  }, {
+    key: "mlTrainImage",
+    value: (function () {
+      var _mlTrainImage = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee3(label) {
+        var classifier, firstSetup, input, _t2;
+        return regenerator.wrap(function (_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              classifier = this.getImageClassifier();
+              firstSetup = !classifier.isReady();
+              if (firstSetup) {
+                this.openNotice(this.setupNoticeMessage, SETUP_NOTICE_MIN_DURATION);
+              }
+              _context3.prev = 1;
+              _context3.next = 2;
+              return this.getVideoInput();
+            case 2:
+              input = _context3.sent;
+              _context3.next = 3;
+              return classifier.train(input, label);
+            case 3:
+              if (firstSetup) {
+                this.closeNotice();
+              }
+              _context3.next = 5;
+              break;
+            case 4:
+              _context3.prev = 4;
+              _t2 = _context3["catch"](1);
+              if (firstSetup) {
+                this.closeNotice(formatMessage({
+                  id: 'xcxml.setupNotice.failed',
+                  default: 'Setup failed. Check the network connection and the camera, then click the block again.',
+                  description: 'message when the first setup failed'
+                }));
+              }
+              console.error(_t2);
+            case 5:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3, this, [[1, 4]]);
+      }));
+      function mlTrainImage(_x2) {
+        return _mlTrainImage.apply(this, arguments);
+      }
+      return mlTrainImage;
     }()
     /**
      * ラベル1を学習する。
@@ -1306,8 +2288,8 @@ var ExtensionBlocks = /*#__PURE__*/function () {
     }
 
     /**
-     * 現在のカメラ画像を分類してラベルを返す。
-     * 未学習のときはカメラを起動せずに空文字列を返す。
+     * 今の入力 (カメラ画像またはマイクの音) を分類してラベルを返す。
+     * 未学習のときはカメラ・マイクを起動せずに空文字列を返す。
      * 短時間に連続で呼ばれた場合 (ステージのモニターなど) はキャッシュを返し、
      * 推論が過剰に走らないようにする。
      * @returns {string|Promise<string>} 分類されたラベル
@@ -1315,31 +2297,32 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "mlLabel",
     value: function mlLabel() {
-      var _this = this;
-      var classifier = this.imageClassifier;
+      var _this3 = this;
+      var classifier = this.getCurrentClassifier();
       if (!classifier || !classifier.hasExamples()) return '';
       if (Date.now() - this.mlLabelUpdatedTime < this.mlLabelUpdateIntervalTime) {
         return this.mlLastLabel;
       }
       if (!this.mlClassifyRequest) {
-        this.mlClassifyRequest = this.getVideoInput().then(function (input) {
+        var classifying = this.inputMode === InputMode.MICROPHONE ? classifier.classify() : this.getVideoInput().then(function (input) {
           return classifier.classify(input);
-        }).then(function (label) {
-          _this.mlLastLabel = label;
-          _this.mlLabelUpdatedTime = Date.now();
+        });
+        this.mlClassifyRequest = classifying.then(function (label) {
+          _this3.mlLastLabel = label;
+          _this3.mlLabelUpdatedTime = Date.now();
           return label;
         }).catch(function (error) {
           console.error(error);
-          return _this.mlLastLabel;
+          return _this3.mlLastLabel;
         }).finally(function () {
-          _this.mlClassifyRequest = null;
+          _this3.mlClassifyRequest = null;
         });
       }
       return this.mlClassifyRequest;
     }
 
     /**
-     * 学習した内容をすべてリセットする。
+     * 学習した内容 (画像・音声の両方) をすべてリセットする。
      */
   }, {
     key: "mlReset",
@@ -1347,22 +2330,31 @@ var ExtensionBlocks = /*#__PURE__*/function () {
       if (this.imageClassifier) {
         this.imageClassifier.reset();
       }
-      this.mlLastLabel = '';
-      this.mlLabelUpdatedTime = 0;
+      if (this.audioClassifier) {
+        this.audioClassifier.reset();
+      }
+      this.clearLabelCache();
     }
 
     /**
-     * 学習データを JSON ファイルとして保存 (ダウンロード) する。
+     * 学習データ (画像・音声の両方) を JSON ファイルとして保存 (ダウンロード) する。
      */
   }, {
     key: "mlSaveData",
     value: function mlSaveData() {
-      var classifier = this.imageClassifier;
-      if (!classifier || !classifier.hasExamples()) {
+      var imageTrained = this.imageClassifier && this.imageClassifier.hasExamples();
+      var audioTrained = this.audioClassifier && this.audioClassifier.hasExamples();
+      if (!imageTrained && !audioTrained) {
         // 学習データが無いときは何もしない
         return;
       }
-      var json = classifier.serialize();
+      // 画像のデータはバージョン 1 と同じ位置 (model, labels) に置き、古い読み手との互換性を保つ
+      var json = JSON.stringify(Object.assign({
+        format: DATA_FORMAT,
+        version: DATA_VERSION
+      }, this.getImageClassifier().exportDataset(), {
+        audio: this.getAudioClassifier().exportDataset()
+      }));
       var blob = new Blob([json], {
         type: 'application/json'
       });
@@ -1384,17 +2376,17 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "mlLoadData",
     value: (function () {
-      var _mlLoadData = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee3() {
-        var _this2 = this;
-        var inputDialog, dialogFace, label, fileForm, fileInput, cancelButton, confirmButton, file, parsed, _t2, _t3;
-        return regenerator.wrap(function (_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+      var _mlLoadData = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee4() {
+        var _this4 = this;
+        var inputDialog, dialogFace, label, fileForm, fileInput, cancelButton, confirmButton, file, _t3, _t4, _t5;
+        return regenerator.wrap(function (_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
             case 0:
               if (!this.mlLoadDialogOpened) {
-                _context3.next = 1;
+                _context4.next = 1;
                 break;
               }
-              return _context3.abrupt("return");
+              return _context4.abrupt("return");
             case 1:
               this.mlLoadDialogOpened = true;
               inputDialog = document.createElement('dialog');
@@ -1438,7 +2430,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
               });
               confirmButton.style.margin = '8px';
               dialogFace.appendChild(confirmButton);
-              _context3.next = 2;
+              _context4.next = 2;
               return new Promise(function (resolve) {
                 confirmButton.onclick = function () {
                   if (fileInput.files.length === 0) return;
@@ -1456,33 +2448,32 @@ var ExtensionBlocks = /*#__PURE__*/function () {
                 inputDialog.showModal();
               }).finally(function () {
                 document.body.removeChild(inputDialog);
-                _this2.mlLoadDialogOpened = false;
+                _this4.mlLoadDialogOpened = false;
               });
             case 2:
-              file = _context3.sent;
+              file = _context4.sent;
               if (file) {
-                _context3.next = 3;
+                _context4.next = 3;
                 break;
               }
-              return _context3.abrupt("return");
+              return _context4.abrupt("return");
             case 3:
-              _context3.prev = 3;
-              _t2 = JSON;
-              _context3.next = 4;
+              _context4.prev = 3;
+              _t3 = this;
+              _t4 = JSON;
+              _context4.next = 4;
               return file.text();
             case 4:
-              parsed = _t2.parse.call(_t2, _context3.sent);
-              _context3.next = 5;
-              return this.getImageClassifier().restore(parsed);
+              _context4.next = 5;
+              return _t3.restoreLearningData.call(_t3, _t4.parse.call(_t4, _context4.sent));
             case 5:
-              this.mlLastLabel = '';
-              this.mlLabelUpdatedTime = 0;
-              _context3.next = 7;
+              this.clearLabelCache();
+              _context4.next = 7;
               break;
             case 6:
-              _context3.prev = 6;
-              _t3 = _context3["catch"](3);
-              console.error(_t3);
+              _context4.prev = 6;
+              _t5 = _context4["catch"](3);
+              console.error(_t5);
               this.openErrorDialog(formatMessage({
                 id: 'xcxml.loadInvalidFile',
                 default: 'This file is not learning data for this extension.',
@@ -1490,9 +2481,9 @@ var ExtensionBlocks = /*#__PURE__*/function () {
               }));
             case 7:
             case "end":
-              return _context3.stop();
+              return _context4.stop();
           }
-        }, _callee3, this, [[3, 6]]);
+        }, _callee4, this, [[3, 6]]);
       }));
       function mlLoadData() {
         return _mlLoadData.apply(this, arguments);
@@ -1500,12 +2491,78 @@ var ExtensionBlocks = /*#__PURE__*/function () {
       return mlLoadData;
     }()
     /**
+     * 学習データファイルの内容を画像・音声の分類器に復元する。
+     * ファイルに含まれない側の学習内容は消去する。
+     * @param {object} parsed - JSON.parse 済みの学習データ
+     * @returns {Promise} 復元完了で resolve する Promise
+     */
+    )
+  }, {
+    key: "restoreLearningData",
+    value: (function () {
+      var _restoreLearningData = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee5(parsed) {
+        var imageData, audioData, imageClassifier, audioClassifier;
+        return regenerator.wrap(function (_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
+            case 0:
+              if (!(!parsed || parsed.format !== DATA_FORMAT || !parsed.labels && !parsed.audio)) {
+                _context5.next = 1;
+                break;
+              }
+              throw new Error('invalid learning data format');
+            case 1:
+              imageData = {
+                model: parsed.model,
+                labels: parsed.labels || {}
+              };
+              audioData = parsed.audio || {
+                labels: {}
+              };
+              imageClassifier = this.getImageClassifier();
+              audioClassifier = this.getAudioClassifier(); // 片方だけ復元されて中途半端にならないよう、先に両方を検査する
+              imageClassifier.checkDataset(imageData);
+              audioClassifier.checkDataset(audioData);
+              _context5.next = 2;
+              return imageClassifier.importDataset(imageData);
+            case 2:
+              _context5.next = 3;
+              return audioClassifier.importDataset(audioData);
+            case 3:
+            case "end":
+              return _context5.stop();
+          }
+        }, _callee5, this);
+      }));
+      function restoreLearningData(_x3) {
+        return _restoreLearningData.apply(this, arguments);
+      }
+      return restoreLearningData;
+    }()
+    /**
+     * 学習・分類の入力元を切り替える。
+     * マイクから切り替えたときはマイクを停止する。カメラの表示はビデオブロックに任せる。
+     * @param {object} args - the block's arguments.
+     * @param {string} args.INPUT - 入力元 (InputMode)
+     */
+    )
+  }, {
+    key: "setInputMode",
+    value: function setInputMode(args) {
+      var mode = args.INPUT === InputMode.MICROPHONE ? InputMode.MICROPHONE : InputMode.CAMERA;
+      if (mode === this.inputMode) return;
+      this.inputMode = mode;
+      this.clearLabelCache();
+      if (mode !== InputMode.MICROPHONE && this.audioClassifier) {
+        this.audioClassifier.stopMicrophone();
+      }
+    }
+
+    /**
      * A scratch command block handle that configures the video state from
      * passed arguments.
      * @param {object} args - the block arguments
      * @param {VideoState} args.VIDEO_STATE - the video state to set the device to
      */
-    )
   }, {
     key: "videoToggle",
     value: function videoToggle(args) {
@@ -1527,7 +2584,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
   }, {
     key: "openErrorDialog",
     value: function openErrorDialog(contentHtml) {
-      var _this3 = this;
+      var _this5 = this;
       if (this.errorDialogOpened) {
         // prevent to open multiple dialogs
         return Promise.resolve(null);
@@ -1571,7 +2628,7 @@ var ExtensionBlocks = /*#__PURE__*/function () {
         closeButton.focus();
       }).finally(function () {
         document.body.removeChild(errorDialog);
-        _this3.errorDialogOpened = false;
+        _this5.errorDialogOpened = false;
       });
     }
 
@@ -1646,6 +2703,21 @@ var ExtensionBlocks = /*#__PURE__*/function () {
             description: 'load trained examples from a file'
           })
         }, '---', {
+          opcode: 'setInputMode',
+          blockType: blockType.COMMAND,
+          text: formatMessage({
+            id: 'xcxml.setInput',
+            default: 'set input to [INPUT]',
+            description: 'select camera or microphone as the input for learning and recognition'
+          }),
+          arguments: {
+            INPUT: {
+              type: argumentType.STRING,
+              menu: 'INPUT',
+              defaultValue: InputMode.CAMERA
+            }
+          }
+        }, {
           opcode: 'videoToggle',
           blockType: blockType.COMMAND,
           text: formatMessage({
@@ -1662,6 +2734,24 @@ var ExtensionBlocks = /*#__PURE__*/function () {
           }
         }],
         menus: {
+          INPUT: {
+            acceptReporters: true,
+            items: [{
+              text: formatMessage({
+                id: 'xcxml.input.camera',
+                default: 'camera',
+                description: 'camera option of the "set input to [INPUT]" block'
+              }),
+              value: InputMode.CAMERA
+            }, {
+              text: formatMessage({
+                id: 'xcxml.input.microphone',
+                default: 'microphone',
+                description: 'microphone option of the "set input to [INPUT]" block'
+              }),
+              value: InputMode.MICROPHONE
+            }]
+          },
           VIDEO_STATE: {
             acceptReporters: true,
             items: [{

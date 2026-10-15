@@ -5,6 +5,7 @@
 import iconURL from './entry-icon.png';
 import insetIconURL from './inset-icon.png';
 import translations from './translations.json';
+import version from './version';
 
 /**
  * Formatter to translate the messages in this extension.
@@ -28,11 +29,12 @@ const entry = {
     iconURL: iconURL,
     insetIconURL: insetIconURL,
     get description () {
-        return formatMessage({
-            defaultMessage: 'Recognize camera images with machine learning (KNN).',
+        // 説明文の末尾にバージョンを付けて、利用者が新旧を見分けられるようにする
+        return `${formatMessage({
+            defaultMessage: 'Recognize camera images and microphone sounds with machine learning (KNN).',
             description: 'Description for the "Machine Learning" extension',
             id: 'xcxml.entry.description'
-        });
+        })} (v${version})`;
     },
     featured: true,
     disabled: false,
