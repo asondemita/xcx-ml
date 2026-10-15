@@ -622,15 +622,39 @@ var img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAA
  * ブロックしていることが多く、拡張機能本体が読める配信元に同梱しておけば
  * 追加の許可なしで動くため。ファイルは libs/ と models/ に置いてある。
  *
+ * 読み込み元は固定せず、拡張機能本体が実際に読み込まれた URL を基準にする。
+ * Xcratch の配布サイトによっては拡張機能をプロキシ (例:
+ * https://xcratch.699.jp/ext/?url=asondemita/xcx-ml/dist/xcx-ml.mjs) 経由で
+ * 配信しており、その環境では GitHub Pages 自体がフィルタで遮られていることが
+ * あるため、ライブラリとモデルも同じプロキシを通して読む。
+ *
  * ML2Scratch と違い、推論のたびに生成される特徴量テンソルを必ず dispose して
  * メモリリークを防ぐ。分類の常時ループも持たない（呼ばれたときだけ推論する）。
  */
 
-var ASSETS_BASE_URL = 'https://asondemita.github.io/xcx-ml';
-var TFJS_URL = "".concat(ASSETS_BASE_URL, "/libs/tf.min.js");
-var KNN_CLASSIFIER_URL = "".concat(ASSETS_BASE_URL, "/libs/knn-classifier.min.js");
-var MOBILENET_URL = "".concat(ASSETS_BASE_URL, "/libs/mobilenet.min.js");
-var MOBILENET_MODEL_URL = "".concat(ASSETS_BASE_URL, "/models/mobilenet_v2_050_224/model.json");
+/**
+ * 拡張機能本体の URL から読み込み元 (ライブラリ・モデル) が見つからないときの既定値
+ * @type {string}
+ */
+var DEFAULT_ASSETS_BASE_URL = 'https://asondemita.github.io/xcx-ml/';
+var TFJS_PATH = 'libs/tf.min.js';
+var KNN_CLASSIFIER_PATH = 'libs/knn-classifier.min.js';
+var MOBILENET_PATH = 'libs/mobilenet.min.js';
+var MOBILENET_MODEL_PATH = 'models/mobilenet_v2_050_224/model.json';
+
+/**
+ * 拡張機能本体の URL から、ライブラリ・モデルの読み込み元 (末尾 / 付き) を求める。
+ * 本体は <base>/dist/xcx-ml.mjs に置かれているので、末尾の dist/… を取り除く。
+ * プロキシ経由 (…/ext/?url=asondemita/xcx-ml/dist/xcx-ml.mjs) でも
+ * 同じ規則で …/ext/?url=asondemita/xcx-ml/ になり、ライブラリとモデルも
+ * プロキシを通る。形が合わなければ既定の GitHub Pages を使う。
+ * @param {string} extensionURL - 拡張機能本体が読み込まれた URL
+ * @returns {string} 読み込み元の URL
+ */
+var assetsBaseURLFrom = function assetsBaseURLFrom(extensionURL) {
+  var matched = /^(.*\/)dist\/[^/]+\.mjs$/.exec(extensionURL || '');
+  return matched ? matched[1] : DEFAULT_ASSETS_BASE_URL;
+};
 
 /**
  * KNN 分類時に参照する近傍数
@@ -671,8 +695,18 @@ var loadScript = function loadScript(url) {
   });
 };
 var ImageClassifier = /*#__PURE__*/function () {
+  /**
+   * @param {string} [assetsBaseURL] - ライブラリ・モデルの読み込み元 (末尾 / 付き)
+   */
   function ImageClassifier() {
+    var assetsBaseURL = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_ASSETS_BASE_URL;
     _classCallCheck(this, ImageClassifier);
+    /**
+     * ライブラリ・モデルの読み込み元
+     * @type {string}
+     */
+    this.assetsBaseURL = assetsBaseURL;
+
     /**
      * ライブラリとモデルのロード処理。一度だけ実行する。
      * @type {?Promise}
@@ -700,35 +734,37 @@ var ImageClassifier = /*#__PURE__*/function () {
       var _this = this;
       if (!this.loading) {
         this.loading = _asyncToGenerator(/*#__PURE__*/regenerator.mark(function _callee() {
+          var base;
           return regenerator.wrap(function (_context) {
             while (1) switch (_context.prev = _context.next) {
               case 0:
+                base = _this.assetsBaseURL;
                 if (window.tf) {
                   _context.next = 1;
                   break;
                 }
                 _context.next = 1;
-                return loadScript(TFJS_URL);
+                return loadScript(base + TFJS_PATH);
               case 1:
                 if (window.knnClassifier) {
                   _context.next = 2;
                   break;
                 }
                 _context.next = 2;
-                return loadScript(KNN_CLASSIFIER_URL);
+                return loadScript(base + KNN_CLASSIFIER_PATH);
               case 2:
                 if (window.mobilenet) {
                   _context.next = 3;
                   break;
                 }
                 _context.next = 3;
-                return loadScript(MOBILENET_URL);
+                return loadScript(base + MOBILENET_PATH);
               case 3:
                 _context.next = 4;
                 return window.mobilenet.load({
                   version: 2,
                   alpha: 0.5,
-                  modelUrl: MOBILENET_MODEL_URL
+                  modelUrl: base + MOBILENET_MODEL_PATH
                 });
               case 4:
                 _this.mobileNet = _context.sent;
@@ -1063,13 +1099,14 @@ var ExtensionBlocks = /*#__PURE__*/function () {
 
   /**
    * 画像分類器を返す。まだ無ければ生成する。
+   * ライブラリ・モデルは、この拡張機能本体が読み込まれた URL と同じ場所から読む。
    * @returns {ImageClassifier} 画像分類器
    */
   return _createClass(ExtensionBlocks, [{
     key: "getImageClassifier",
     value: function getImageClassifier() {
       if (!this.imageClassifier) {
-        this.imageClassifier = new ImageClassifier();
+        this.imageClassifier = new ImageClassifier(assetsBaseURLFrom(ExtensionBlocks.extensionURL));
       }
       return this.imageClassifier;
     }

@@ -3,7 +3,7 @@ import ArgumentType from '../../extension-support/argument-type';
 import translations from './translations.json';
 import blockIcon from './block-icon.png';
 
-import ImageClassifier from './image-classifier';
+import ImageClassifier, {assetsBaseURLFrom} from './image-classifier';
 
 /**
  * Formatter which is used for translation.
@@ -179,11 +179,12 @@ class ExtensionBlocks {
 
     /**
      * 画像分類器を返す。まだ無ければ生成する。
+     * ライブラリ・モデルは、この拡張機能本体が読み込まれた URL と同じ場所から読む。
      * @returns {ImageClassifier} 画像分類器
      */
     getImageClassifier () {
         if (!this.imageClassifier) {
-            this.imageClassifier = new ImageClassifier();
+            this.imageClassifier = new ImageClassifier(assetsBaseURLFrom(ExtensionBlocks.extensionURL));
         }
         return this.imageClassifier;
     }
